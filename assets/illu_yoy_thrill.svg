@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="100%" height="100%">
+  <defs>
+    <linearGradient id="sky_thrill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#4c0519"/>
+      <stop offset="50%" stop-color="#881337"/>
+      <stop offset="100%" stop-color="#e11d48"/>
+    </linearGradient>
+    <linearGradient id="track_thrill" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#fb7185"/>
+      <stop offset="100%" stop-color="#be123c"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="450" fill="url(#sky_thrill)"/>
+  <circle cx="650" cy="120" r="100" fill="#fb7185" opacity="0.25"/>
+  <path d="M 0 380 Q 200 420 300 250 C 400 50 200 -20 350 150 Q 550 380 800 200" fill="none" stroke="#4c0519" stroke-width="26"/>
+  <path d="M 0 380 Q 200 420 300 250 C 400 50 200 -20 350 150 Q 550 380 800 200" fill="none" stroke="url(#track_thrill)" stroke-width="18"/>
+  <path d="M 0 380 Q 200 420 300 250 C 400 50 200 -20 350 150 Q 550 380 800 200" fill="none" stroke="#fff" stroke-width="4" stroke-dasharray="12 6"/>
+  <g transform="translate(290, 80) rotate(160)">
+    <rect x="-60" y="-18" width="120" height="36" rx="10" fill="#e11d48" stroke="#fff" stroke-width="3"/>
+    <circle cx="-35" cy="-24" r="7" fill="#fef08a"/>
+    <circle cx="0" cy="-24" r="7" fill="#fef08a"/>
+    <circle cx="35" cy="-24" r="7" fill="#fef08a"/>
+  </g>
+</svg>

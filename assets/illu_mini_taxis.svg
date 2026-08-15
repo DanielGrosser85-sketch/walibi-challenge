@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="100%" height="100%">
+  <defs>
+    <linearGradient id="sky_taxi" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#713f12"/>
+      <stop offset="50%" stop-color="#ca8a04"/>
+      <stop offset="100%" stop-color="#fef08a"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="450" fill="url(#sky_taxi)"/>
+  <rect x="250" y="180" width="160" height="90" rx="20" fill="#eab308" stroke="#18181b" stroke-width="6"/>
+  <rect x="270" y="195" width="40" height="30" rx="4" fill="#000"/>
+  <rect x="450" y="210" width="150" height="85" rx="20" fill="#ef4444" stroke="#18181b" stroke-width="6"/>
+  <path d="M 330 180 L 320 60 L 340 50" stroke="#fef08a" stroke-width="6"/>
+</svg>

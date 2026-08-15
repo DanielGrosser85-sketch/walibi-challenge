@@ -1,0 +1,21 @@
+{
+  "name": "walibi-challenge-app",
+  "version": "1.0.0",
+  "description": "Mobile Freizeitpark Challenge & Froschkönig App",
+  "main": "index.html",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "challenge",
+    "freizeitpark",
+    "walibi",
+    "game"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "docx": "^9.7.1"
+  }
+}

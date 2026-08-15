@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="100%" height="100%">
+  <defs>
+    <linearGradient id="sky_the" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#78350f"/>
+      <stop offset="50%" stop-color="#b45309"/>
+      <stop offset="100%" stop-color="#fde047"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="450" fill="url(#sky_the)"/>
+  <g transform="translate(280, 260)">
+    <ellipse cx="0" cy="20" rx="60" ry="24" fill="#fbbf24"/>
+    <path d="M -50 20 L -40 80 Q 0 100 40 80 L 50 20 Z" fill="#fff" stroke="#d97706" stroke-width="4"/>
+  </g>
+  <g transform="translate(520, 260)">
+    <ellipse cx="0" cy="20" rx="60" ry="24" fill="#fbbf24"/>
+    <path d="M -50 20 L -40 80 Q 0 100 40 80 L 50 20 Z" fill="#fff" stroke="#d97706" stroke-width="4"/>
+  </g>
+</svg>

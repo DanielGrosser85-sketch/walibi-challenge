@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="100%" height="100%">
+  <defs>
+    <linearGradient id="sky_sound" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1e1b4b"/>
+      <stop offset="50%" stop-color="#312e81"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="450" fill="url(#sky_sound)"/>
+  <circle cx="400" cy="220" r="180" fill="none" stroke="#f59e0b" stroke-width="2" opacity="0.4"/>
+  <circle cx="400" cy="220" r="120" fill="none" stroke="#f59e0b" stroke-width="3" opacity="0.6"/>
+  <circle cx="400" cy="220" r="60" fill="none" stroke="#f59e0b" stroke-width="4" opacity="0.8"/>
+  <path d="M 100 450 L 250 80 Q 300 40 350 200 C 400 350 500 50 600 220 L 750 450" fill="none" stroke="#d97706" stroke-width="18"/>
+  <path d="M 100 450 L 250 80 Q 300 40 350 200 C 400 350 500 50 600 220 L 750 450" fill="none" stroke="#fef08a" stroke-width="4" stroke-dasharray="14 8"/>
+</svg>

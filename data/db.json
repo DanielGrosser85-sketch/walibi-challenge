@@ -1,0 +1,100 @@
+{
+  "players": [
+    {
+      "id": "p1",
+      "name": "Alex",
+      "house": "Haus 1",
+      "avatar": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23e11d48'/><text x='50' y='60' font-size='40' text-anchor='middle' fill='white' font-family='sans-serif'>A</text></svg>",
+      "points": 0,
+      "drinksCount": 0,
+      "completedQuests": [],
+      "drinksDetail": {
+        "beer": 0,
+        "shot": 0,
+        "longdrink": 0,
+        "joint": 0,
+        "water": 0
+      },
+      "rideCounts": {}
+    },
+    {
+      "id": "p2",
+      "name": "Stefan",
+      "house": "Haus 2",
+      "avatar": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23ec4899'/><text x='50' y='60' font-size='40' text-anchor='middle' fill='white' font-family='sans-serif'>S</text></svg>",
+      "points": 0,
+      "drinksCount": 0,
+      "completedQuests": [],
+      "drinksDetail": {
+        "beer": 0,
+        "shot": 0,
+        "longdrink": 0,
+        "joint": 0,
+        "water": 0
+      },
+      "rideCounts": {}
+    },
+    {
+      "id": "p3",
+      "name": "Felix",
+      "house": "Haus 1",
+      "avatar": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%2310b981'/><text x='50' y='60' font-size='40' text-anchor='middle' fill='white' font-family='sans-serif'>F</text></svg>",
+      "points": 0,
+      "drinksCount": 0,
+      "completedQuests": [],
+      "rideCounts": {},
+      "drinksDetail": {
+        "beer": 0,
+        "shot": 0,
+        "longdrink": 0,
+        "joint": 0,
+        "water": 0
+      }
+    },
+    {
+      "id": "p4",
+      "name": "Laura",
+      "house": "Haus 2",
+      "avatar": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23f59e0b'/><text x='50' y='60' font-size='40' text-anchor='middle' fill='white' font-family='sans-serif'>L</text></svg>",
+      "points": 0,
+      "drinksCount": 0,
+      "completedQuests": [],
+      "rideCounts": {},
+      "drinksDetail": {
+        "beer": 0,
+        "shot": 0,
+        "longdrink": 0,
+        "joint": 0,
+        "water": 0
+      }
+    },
+    {
+      "id": "p_1786747056481_o5jo",
+      "name": "grossek",
+      "house": "Haus 1",
+      "avatar": "assets/mascot_fox.jpg",
+      "points": 0,
+      "drinksCount": 0,
+      "completedQuests": [],
+      "rideCounts": {},
+      "drinksDetail": {
+        "beer": 0,
+        "shot": 0,
+        "longdrink": 0,
+        "joint": 0,
+        "water": 0
+      }
+    }
+  ],
+  "houses": [
+    "Haus 1",
+    "Haus 2",
+    "Haus 3"
+  ],
+  "feed": [],
+  "version": 89,
+  "gameStatus": {
+    "isRunning": true,
+    "startedAt": "2026-08-15T00:37:48.287Z"
+  }
+}
