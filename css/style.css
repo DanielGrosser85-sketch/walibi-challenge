@@ -85,37 +85,39 @@ body {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(13, 18, 34, 0.96);
+  background: rgba(13, 18, 34, 0.98);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
-  border-bottom: 3.5px solid var(--walibi-yellow);
-  padding: 10px 14px;
+  border-bottom: 3px solid var(--walibi-yellow);
+  padding: 8px 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 6px 0 rgba(0,0,0,0.5), 0 10px 24px rgba(0,0,0,0.6);
+  gap: 6px;
+  box-shadow: 0 4px 0 rgba(0,0,0,0.5), 0 8px 20px rgba(0,0,0,0.6);
 }
 
 .header-brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 /* Walibi W-Badge */
 .walibi-w-badge {
   background: var(--gradient-red);
-  border: 3px solid var(--walibi-yellow);
+  border: 2.5px solid var(--walibi-yellow);
   color: #fff;
   font-family: var(--font-headline);
-  font-size: 24px;
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
+  font-size: 20px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 0 rgba(0,0,0,0.6);
+  box-shadow: 0 3px 0 rgba(0,0,0,0.6);
   transform: rotate(-3deg);
   text-shadow: 1px 2px 0 #000;
 }
@@ -127,8 +129,8 @@ body {
 
 .brand-main-title {
   font-family: var(--font-headline);
-  font-size: 21px;
-  letter-spacing: 0.8px;
+  font-size: 19px;
+  letter-spacing: 0.6px;
   color: var(--walibi-yellow);
   text-transform: uppercase;
   line-height: 1;
@@ -136,7 +138,7 @@ body {
 }
 
 .brand-subtitle-tag {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 800;
   color: var(--walibi-pink);
   text-transform: uppercase;
@@ -146,14 +148,15 @@ body {
 .header-user-profile {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   cursor: pointer;
-  padding: 4px 10px;
+  padding: 3px 8px;
   border-radius: var(--radius-full);
   background: var(--game-panel-light);
-  border: 2.5px solid var(--walibi-yellow);
-  box-shadow: 0 3px 0 rgba(0,0,0,0.4);
+  border: 2px solid var(--walibi-yellow);
+  box-shadow: 0 2px 0 rgba(0,0,0,0.4);
   transition: transform 0.15s ease;
+  min-width: 0;
 }
 
 .header-user-profile:active {
@@ -161,52 +164,56 @@ body {
 }
 
 .header-avatar {
-  width: 34px;
-  height: 34px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid var(--walibi-yellow);
+  border: 1.5px solid var(--walibi-yellow);
+  flex-shrink: 0;
 }
 
 .header-user-meta {
   display: flex;
   flex-direction: column;
   line-height: 1.1;
+  min-width: 0;
 }
 
 .header-username {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
-  max-width: 75px;
+  max-width: 60px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .header-score-pill {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--walibi-yellow);
   font-weight: 900;
 }
 
 .header-actions {
   display: flex;
-  gap: 6px;
+  gap: 5px;
+  flex-shrink: 0;
+  align-items: center;
 }
 
 .icon-btn {
   background: var(--game-panel-light);
   border: 2px solid rgba(255, 255, 255, 0.2);
   color: var(--text-main);
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 15px;
   cursor: pointer;
-  box-shadow: 0 3px 0 rgba(0,0,0,0.4);
+  box-shadow: 0 2px 0 rgba(0,0,0,0.4);
   transition: transform 0.15s ease;
 }
 
@@ -215,24 +222,34 @@ body {
   box-shadow: 0 1px 0 rgba(0,0,0,0.4);
 }
 
-/* --- MASKOTTCHEN HERO PANEL --- */
+.btn-menu-accent {
+  background: var(--gradient-gold);
+  color: #000;
+  border-color: #fff;
+  font-weight: 900;
+  box-shadow: 0 3px 0 rgba(0,0,0,0.6);
+}
+
+/* --- MASKOTTCHEN HERO PANEL (KOMPAKT & ZUKLAPPBAR) --- */
 .mascot-hero-card {
-  margin: 12px 14px 6px;
+  margin: 10px 12px 6px;
   background: var(--game-panel-bg);
-  border: 3.5px solid var(--walibi-yellow);
-  border-radius: var(--radius-xl);
+  border: 3px solid var(--walibi-yellow);
+  border-radius: var(--radius-lg);
   overflow: hidden;
   box-shadow: var(--shadow-arcade-card);
   position: relative;
   backdrop-filter: blur(14px);
+  transition: all 0.3s ease;
 }
 
 .mascot-hero-artwork-wrapper {
   position: relative;
   width: 100%;
-  height: 195px;
+  height: 105px;
   overflow: hidden;
   background: #080b14;
+  transition: height 0.3s ease;
 }
 
 .mascot-hero-img {
@@ -245,54 +262,78 @@ body {
 
 .mascot-banner-badge {
   position: absolute;
-  top: 10px;
-  left: 10px;
+  top: 8px;
+  left: 8px;
   background: var(--gradient-red);
   color: #fff;
-  border: 2px solid #fff;
-  padding: 4px 12px;
+  border: 1.5px solid #fff;
+  padding: 3px 10px;
   border-radius: var(--radius-full);
   font-family: var(--font-headline);
-  font-size: 13px;
-  letter-spacing: 0.6px;
-  box-shadow: 0 3px 6px rgba(0,0,0,0.6);
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.6);
   text-transform: uppercase;
 }
 
+.mascot-toggle-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.75);
+  border: 1.5px solid var(--walibi-yellow);
+  color: var(--walibi-yellow);
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 900;
+  cursor: pointer;
+  z-index: 10;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  transition: transform 0.15s ease;
+}
+
+.mascot-toggle-btn:active {
+  transform: scale(0.9);
+}
+
 .mascot-interactive-bar {
-  padding: 12px 14px;
+  padding: 8px 10px;
   background: rgba(10, 13, 24, 0.95);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .mascot-selection-row {
   display: flex;
   align-items: center;
   justify-content: space-around;
-  gap: 8px;
+  gap: 6px;
 }
 
 .mascot-interactive-avatar {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   cursor: pointer;
   transition: transform 0.2s ease;
   position: relative;
 }
 
 .mascot-interactive-avatar:hover, .mascot-interactive-avatar:active {
-  transform: scale(1.08);
+  transform: scale(1.06);
 }
 
 .mascot-interactive-avatar.active-speaker .mascot-round-face {
   border-color: #ffcc00;
-  box-shadow: 0 0 16px rgba(255, 204, 0, 0.8), 0 4px 0 rgba(0,0,0,0.6);
-  transform: scale(1.12);
-  animation: avatarBounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 0 12px rgba(255, 204, 0, 0.8), 0 3px 0 rgba(0,0,0,0.6);
+  transform: scale(1.1);
 }
 
 .mascot-interactive-avatar.active-speaker .mascot-face-name {
@@ -300,24 +341,18 @@ body {
   font-weight: 900;
 }
 
-@keyframes avatarBounce {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.22) translateY(-4px); }
-  100% { transform: scale(1.12) translateY(0); }
-}
-
 .mascot-round-face {
-  width: 52px;
-  height: 52px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2.5px solid var(--walibi-yellow);
-  box-shadow: 0 3px 0 rgba(0,0,0,0.4);
+  border: 2px solid var(--walibi-yellow);
+  box-shadow: 0 2px 0 rgba(0,0,0,0.4);
   transition: all 0.2s ease;
 }
 
 .mascot-face-name {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
   color: #fff;
   text-align: center;
@@ -328,23 +363,23 @@ body {
 .comic-speech-bubble {
   background: #ffffff;
   color: #0f172a;
-  border: 3px solid #0f172a;
+  border: 2.5px solid #0f172a;
   border-radius: var(--radius-md);
-  padding: 10px 14px;
-  font-size: 13px;
+  padding: 8px 12px;
+  font-size: 12px;
   font-weight: 700;
-  line-height: 1.35;
+  line-height: 1.3;
   position: relative;
-  box-shadow: 0 4px 0 rgba(0,0,0,0.4);
-  margin-top: 6px;
+  box-shadow: 0 3px 0 rgba(0,0,0,0.4);
+  margin-top: 4px;
   transition: all 0.2s ease;
 }
 
 .comic-speech-bubble::before {
   content: "";
   position: absolute;
-  top: -11px;
-  border-width: 0 10px 11px 10px;
+  top: -9px;
+  border-width: 0 8px 9px 8px;
   border-style: solid;
   border-color: transparent transparent #0f172a transparent;
   display: block;
@@ -354,8 +389,8 @@ body {
 .comic-speech-bubble::after {
   content: "";
   position: absolute;
-  top: -6px;
-  border-width: 0 8px 8px 8px;
+  top: -5px;
+  border-width: 0 6px 6px 6px;
   border-style: solid;
   border-color: transparent transparent #fff transparent;
   display: block;
@@ -371,6 +406,35 @@ body {
 
 .comic-speech-bubble.arrow-right::before { left: 84%; transform: translateX(-50%); }
 .comic-speech-bubble.arrow-right::after { left: 84%; transform: translateX(-50%); }
+
+/* ZUGEKLAPPTER ZUSTAND DES MASKOTTCHEN BANNERS */
+.mascot-hero-card.collapsed .mascot-hero-artwork-wrapper {
+  height: 0;
+  display: none;
+}
+
+.mascot-hero-card.collapsed .mascot-selection-row {
+  display: none;
+}
+
+.mascot-hero-card.collapsed .mascot-interactive-bar {
+  padding: 6px 10px;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.mascot-hero-card.collapsed .comic-speech-bubble {
+  margin-top: 0;
+  flex: 1;
+  padding: 6px 10px;
+  font-size: 11px;
+}
+
+.mascot-hero-card.collapsed .comic-speech-bubble::before,
+.mascot-hero-card.collapsed .comic-speech-bubble::after {
+  display: none;
+}
 
 /* --- SPONTANER SOCIAL POST BUTTON --- */
 .btn-create-social-post {
@@ -1789,28 +1853,109 @@ body {
 /* --- FLOATING COUNTER BUTTON --- */
 .floating-counter-fab {
   position: fixed;
-  bottom: 84px;
-  right: 16px;
+  bottom: 74px;
+  right: 12px;
   z-index: 90;
   background: var(--gradient-red);
   color: #fff;
-  border: 3px solid var(--walibi-yellow);
-  padding: 11px 18px;
+  border: 2.5px solid var(--walibi-yellow);
+  padding: 8px 15px;
   border-radius: var(--radius-full);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   font-family: var(--font-headline);
-  font-size: 17px;
+  font-size: 15px;
   letter-spacing: 0.5px;
   cursor: pointer;
-  box-shadow: 0 6px 0 rgba(0,0,0,0.5), 0 8px 24px rgba(225, 29, 72, 0.5);
+  box-shadow: 0 4px 0 rgba(0,0,0,0.5), 0 6px 18px rgba(225, 29, 72, 0.4);
   transition: transform 0.15s ease;
 }
 
 .floating-counter-fab:active {
-  transform: translateY(3px);
-  box-shadow: 0 2px 0 rgba(0,0,0,0.5);
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 rgba(0,0,0,0.5);
+}
+
+/* --- QUICK MENU GRID & TILES --- */
+.quick-menu-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 6px 0 12px;
+}
+
+.quick-menu-card {
+  background: var(--game-panel-light);
+  border: 2px solid rgba(255, 255, 255, 0.16);
+  border-radius: var(--radius-md);
+  padding: 11px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  text-align: left;
+  box-shadow: 0 3px 0 rgba(0,0,0,0.35);
+  transition: transform 0.15s ease;
+}
+
+.quick-menu-card:active {
+  transform: translateY(2px);
+  border-color: var(--walibi-yellow);
+}
+
+.quick-menu-icon {
+  font-size: 24px;
+  width: 32px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.quick-menu-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.quick-menu-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.quick-menu-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.quick-menu-toggles-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.quick-toggle-btn {
+  background: var(--game-panel-light);
+  border: 2px solid rgba(255, 255, 255, 0.16);
+  border-radius: var(--radius-md);
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 3px 0 rgba(0,0,0,0.35);
+  transition: transform 0.15s ease;
+}
+
+.quick-toggle-btn:active {
+  transform: translateY(2px);
+  border-color: var(--walibi-yellow);
 }
 
 /* --- BOTTOM NAVIGATION BAR --- */

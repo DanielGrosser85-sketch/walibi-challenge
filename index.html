@@ -12,17 +12,18 @@
   <div class="app-container">
 
     <!-- HEADER / GAME HUD BAR -->
+    <!-- HEADER / GAME HUD BAR -->
     <header class="app-header">
       <div class="header-brand">
         <div class="walibi-w-badge">W</div>
         <div class="header-titles">
-          <h1 class="brand-main-title">MR. & MRS. WALIBI</h1>
-          <span class="brand-subtitle-tag">SAUFTOUR '26 🍺</span>
+          <h1 class="brand-main-title">WALIBI</h1>
+          <span class="brand-subtitle-tag">'26 🍺</span>
         </div>
       </div>
 
       <!-- PROFIL BADGE -->
-      <div class="header-user-profile" id="headerProfileTrigger">
+      <div class="header-user-profile" id="headerProfileTrigger" title="Mein Profil anpassen">
         <img id="headerUserAvatar" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23e11d48'/><text x='50' y='60' font-size='40' text-anchor='middle' fill='white' font-family='sans-serif'>?</text></svg>" class="header-avatar" alt="Avatar" />
         <div class="header-user-meta">
           <span class="header-username" id="headerUserName">Laden...</span>
@@ -32,47 +33,44 @@
 
       <div class="header-actions">
         <button class="icon-btn" id="btnAdminPanel" onclick="ProfileModule.openAdminModal()" title="👑 Admin-Konsole (grossek)" style="display: none; border-color: var(--walibi-yellow); background: rgba(255,204,0,0.25);">👑</button>
-        <button class="icon-btn" id="btnToggleWakeLock" onclick="ProfileModule.toggleWakeLock()" title="Display immer an (Wachhalten)">⚡</button>
-        <button class="icon-btn" id="btnToggleSound" onclick="GameAudio.enabled = !GameAudio.enabled; this.textContent = GameAudio.enabled ? '🔊' : '🔇';" title="Sound an/aus">🔊</button>
-        <button class="icon-btn" id="btnOpenParkGuide" onclick="ParkGuideModule.openModal()" title="Achterbahn-Guide & Nebenquests">🎢</button>
-        <button class="icon-btn" id="btnOpenSchedule" onclick="ProfileModule.openScheduleModal()" title="Zeitplan ansehen">📅</button>
-        <button class="icon-btn" id="btnOpenRules" onclick="ProfileModule.openRulesModal()" title="Regelwerk ansehen">📜</button>
         <button class="icon-btn" id="btnEditProfile" onclick="ProfileModule.openMyProfileModal()" title="Spieler-Eigenschaften">⚙️</button>
+        <button class="icon-btn btn-menu-accent" id="btnQuickMenuTrigger" onclick="app.openQuickMenu()" title="Menü & Werkzeuge">⚡</button>
       </div>
     </header>
 
     <!-- TOAST NOTIFICATIONS -->
     <div id="toastContainer" class="toast-container"></div>
 
-    <!-- GROSSES MASKOTTCHEN HERO BANNER -->
-    <section class="mascot-hero-card">
-      <div class="mascot-hero-artwork-wrapper">
+    <!-- KOMPAKTES & ZUKLAPPBARES MASKOTTCHEN BANNER -->
+    <section class="mascot-hero-card" id="mascotHeroCard">
+      <div class="mascot-hero-artwork-wrapper" id="mascotArtworkWrap">
         <img src="assets/walibi_trio_banner.jpg" class="mascot-hero-img" alt="Walibi Maskottchen Trio" />
-        <div class="mascot-banner-badge">🔥 SAUFTOUR '26 CREW</div>
+        <div class="mascot-banner-badge">🔥 SAUFTOUR '26</div>
+        <button class="mascot-toggle-btn" id="mascotToggleBtn" onclick="app.toggleMascotHero()" title="Banner ein-/ausklappen">▲</button>
       </div>
 
-      <div class="mascot-interactive-bar">
+      <div class="mascot-interactive-bar" id="mascotInteractiveBar">
         <!-- 3 INTERAKTIVE MASKOTTCHEN GESICHTER -->
-        <div class="mascot-selection-row">
+        <div class="mascot-selection-row" id="mascotSelectionRow">
           <div class="mascot-interactive-avatar active-speaker" id="avatar_hard_gaan" onclick="app.showMascotQuote('hard_gaan')" title="Tipp Freikörper-Fred an!">
             <img src="assets/mascot_hard_gaan.jpg" class="mascot-round-face" />
-            <span class="mascot-face-name">Freikörper-Fred</span>
+            <span class="mascot-face-name">Fred</span>
           </div>
 
           <div class="mascot-interactive-avatar" id="avatar_kangaroo" onclick="app.showMascotQuote('kangaroo')" title="Tipp Monsieur Walibi an!">
             <img src="assets/mascot_kangaroo.jpg" class="mascot-round-face" />
-            <span class="mascot-face-name">Monsieur Walibi</span>
+            <span class="mascot-face-name">Walibi</span>
           </div>
 
           <div class="mascot-interactive-avatar" id="avatar_fox" onclick="app.showMascotQuote('fox')" title="Tipp Großer an!">
             <img src="assets/mascot_fox.jpg" class="mascot-round-face" />
-            <span class="mascot-face-name">Großer (Spaß-Diktator)</span>
+            <span class="mascot-face-name">Großer</span>
           </div>
         </div>
 
         <!-- DYNAMISCHE COMIC-SPRECHBLASE MIT PFEIL-STEUERUNG -->
         <div class="comic-speech-bubble arrow-left" id="mascotSpeechBubble">
-          <span id="mascotDynamicQuote"><strong>Freikörper-Fred (🩱):</strong> "TOO HOT TO HANDLE! Wer Kleidung trägt, hat Angst vor Fahrtwind!"</span>
+          <span id="mascotDynamicQuote"><strong>Fred (🩱):</strong> "TOO HOT TO HANDLE! Wer Kleidung trägt, hat Angst vor Fahrtwind!"</span>
         </div>
       </div>
     </section>
@@ -591,6 +589,69 @@
         <button class="btn-close-modal" id="closeRulesModal">✕</button>
       </div>
       <div class="rules-list" id="rulesListContainer"></div>
+    </div>
+  </div>
+
+  <!-- 11. QUICK TOOLS & MENÜ MODAL -->
+  <div id="quickMenuModal" class="modal-overlay hidden">
+    <div class="modal-container" style="max-width: 440px;">
+      <div class="modal-header">
+        <h2 class="modal-title">⚡ Tools & Menü</h2>
+        <button class="btn-close-modal" onclick="app.closeQuickMenu()">✕</button>
+      </div>
+
+      <div class="quick-menu-grid">
+        <button class="quick-menu-card" onclick="app.closeQuickMenu(); ParkGuideModule.openModal();">
+          <span class="quick-menu-icon">🎢</span>
+          <div class="quick-menu-text">
+            <span class="quick-menu-title">Park-Guide & Counter</span>
+            <span class="quick-menu-desc">Achterbahnen, Infos & Nebenquests</span>
+          </div>
+        </button>
+
+        <button class="quick-menu-card" onclick="app.closeQuickMenu(); ProfileModule.openScheduleModal();">
+          <span class="quick-menu-icon">📅</span>
+          <div class="quick-menu-text">
+            <span class="quick-menu-title">Samstag-Zeitplan</span>
+            <span class="quick-menu-desc">Treffpunkte, Grillen & Siegerehrung</span>
+          </div>
+        </button>
+
+        <button class="quick-menu-card" onclick="app.closeQuickMenu(); ProfileModule.openRulesModal();">
+          <span class="quick-menu-icon">📜</span>
+          <div class="quick-menu-text">
+            <span class="quick-menu-title">Heilige Regeln</span>
+            <span class="quick-menu-desc">Punkte, Voting & Froschkönig</span>
+          </div>
+        </button>
+
+        <button class="quick-menu-card" onclick="app.closeQuickMenu(); ProfileModule.openMyProfileModal();">
+          <span class="quick-menu-icon">⚙️</span>
+          <div class="quick-menu-text">
+            <span class="quick-menu-title">Mein Profil & Haus</span>
+            <span class="quick-menu-desc">Name, Selfie & Statistiken anpassen</span>
+          </div>
+        </button>
+
+        <div class="quick-menu-toggles-row">
+          <button class="quick-toggle-btn" id="menuToggleSound" onclick="app.toggleSoundFromMenu()">
+            <span id="menuSoundIcon">🔊</span>
+            <span id="menuSoundLabel">Sound: AN</span>
+          </button>
+          <button class="quick-toggle-btn" id="menuToggleWakeLock" onclick="app.toggleWakeLockFromMenu()">
+            <span id="menuWakeIcon">⚡</span>
+            <span id="menuWakeLabel">Display an</span>
+          </button>
+        </div>
+
+        <button class="quick-menu-card admin-only-card" id="menuAdminBtn" style="display: none; border-color: var(--walibi-yellow); background: rgba(255,204,0,0.18);" onclick="app.closeQuickMenu(); ProfileModule.openAdminModal();">
+          <span class="quick-menu-icon">👑</span>
+          <div class="quick-menu-text">
+            <span class="quick-menu-title" style="color: var(--walibi-yellow);">Admin-Konsole</span>
+            <span class="quick-menu-desc">Punkte-Korrektur & Notfall-Reset</span>
+          </div>
+        </button>
+      </div>
     </div>
   </div>
 
