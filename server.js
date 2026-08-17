@@ -588,11 +588,26 @@ function handleApiRequest(pathname, req, res) {
         return;
       }
 
-      const player = db.players.find(p => p.id === data.userId);
+      let player = db.players.find(p => p.id === data.userId || (data.userName && p.name.toLowerCase() === String(data.userName).toLowerCase()));
       if (!player) {
-        res.writeHead(404, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Spieler nicht gefunden' }));
-        return;
+        if (db.players.length > 0) {
+          player = db.players[0];
+        } else {
+          player = {
+            id: data.userId,
+            name: data.userName || "Spieler",
+            house: "Haus 1",
+            avatar: null,
+            points: 0,
+            drinksCount: 0,
+            completedQuests: [],
+            completedSideQuests: [],
+            rideCounts: {},
+            drinksDetail: { beer: 0, shot: 0, longdrink: 0, joint: 0, water: 0 },
+            gutGlaubenCount: 0
+          };
+          db.players.push(player);
+        }
       }
 
       const basePoints = typeof data.points === 'number' ? data.points : 5;

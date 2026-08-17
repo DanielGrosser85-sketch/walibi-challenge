@@ -5,8 +5,8 @@
       "name": "grossek",
       "house": "Haus 1",
       "avatar": "assets/avatar_belaestigungspanda.jpg",
-      "points": 1035,
-      "drinksCount": 22,
+      "points": 1090,
+      "drinksCount": 24,
       "completedQuests": [
         "coaster_lost_gravity",
         "coaster_untamed",
@@ -25,7 +25,8 @@
         "side_goliath_king",
         "side_coaster_marathon_10",
         "side_lost_gravity_3",
-        "side_water_combo"
+        "side_water_combo",
+        "side_shot_duo"
       ],
       "rideCounts": {
         "attr_lost_gravity": 3,
@@ -42,50 +43,14 @@
       },
       "drinksDetail": {
         "beer": 11,
-        "shot": 2,
-        "longdrink": 8,
+        "shot": 3,
+        "longdrink": 9,
         "joint": 1,
         "water": 0
       },
-      "gutGlaubenCount": 0
-    },
-    {
-      "id": "p_1786989963387_h6xn",
-      "name": "Fretisch",
-      "house": "Haus 1",
-      "avatar": "assets/mascot_hard_gaan.jpg",
-      "points": 10,
-      "drinksCount": 0,
-      "completedQuests": [],
-      "completedSideQuests": [],
-      "rideCounts": {
-        "attr_yoy_chill": 2
-      },
-      "drinksDetail": {
-        "beer": 0,
-        "shot": 0,
-        "longdrink": 0,
-        "joint": 0,
-        "water": 0
-      }
-    },
-    {
-      "id": "p_1786991582715_ocb3",
-      "name": "joya",
-      "house": "Haus 1",
-      "avatar": "assets/mascot_fibi_singer.jpg",
-      "points": 2,
-      "drinksCount": 0,
-      "completedQuests": [],
-      "completedSideQuests": [],
-      "rideCounts": {},
-      "drinksDetail": {
-        "beer": 0,
-        "shot": 0,
-        "longdrink": 0,
-        "joint": 0,
-        "water": 0
-      }
+      "gutGlaubenCount": 0,
+      "sympathyPoints": 0,
+      "sympathyVotesReceived": []
     }
   ],
   "houses": [
@@ -95,466 +60,19 @@
   ],
   "feed": [
     {
-      "id": "feed_1786994053904_ulq32",
-      "type": "social",
-      "userId": "p_1786747056481_o5jo",
-      "userName": "grossek",
-      "userAvatar": "assets/avatar_belaestigungspanda.jpg",
-      "userHouse": "Haus 1",
-      "text": "Schnappschuss geteilt 📸",
-      "photo": "/uploads/post_1786994053903_pbkayv.jpg",
-      "isVideo": false,
-      "points": 10,
-      "actualPointsAwarded": 10,
-      "timestamp": "2026-08-17T19:14:13.904Z",
-      "reactions": {
-        "🔥": [],
-        "🍺": [],
-        "👑": [
-          "p_1786991582715_ocb3"
-        ],
-        "💀": [],
-        "👏": []
-      },
-      "comments": [
-        {
-          "id": "c_1786994080042_jlf0",
-          "userId": "p_1786991582715_ocb3",
-          "userName": "joya",
-          "userAvatar": "assets/mascot_fibi_singer.jpg",
-          "text": "geil",
-          "photo": null,
-          "points": 2,
-          "timestamp": "2026-08-17T19:14:40.042Z"
-        }
-      ]
-    },
-    {
-      "id": "feed_achieve_p_1786747056481_o5jo_side_water_combo",
+      "id": "feed_achieve_p_1786747056481_o5jo_side_shot_duo",
       "type": "achievement",
       "userId": "p_1786747056481_o5jo",
       "userName": "grossek",
       "userAvatar": "assets/avatar_belaestigungspanda.jpg",
       "userHouse": "Haus 1",
-      "achievementId": "side_water_combo",
-      "achievementTitle": "Wasser-Trio (Crazy River + El Rio + Splash Battle) 🌊",
-      "achievementDesc": "Fahre alle 3 Wasser-Attraktionen (Crazy River, El Rio Grande und Splash Battle) an einem Tag!",
-      "achievementIcon": "💧",
-      "points": 45,
-      "actualPointsAwarded": 45,
-      "timestamp": "2026-08-17T19:06:51.450Z",
-      "reactions": {
-        "🔥": [],
-        "🍺": [],
-        "👑": [],
-        "💀": [],
-        "👏": []
-      },
-      "comments": []
-    },
-    {
-      "id": "feed_achieve_p_1786747056481_o5jo_side_lost_gravity_3",
-      "type": "achievement",
-      "userId": "p_1786747056481_o5jo",
-      "userName": "grossek",
-      "userAvatar": "assets/avatar_belaestigungspanda.jpg",
-      "userHouse": "Haus 1",
-      "achievementId": "side_lost_gravity_3",
-      "achievementTitle": "Lost Gravity Schwerelos-Meister (3x) 🌀",
-      "achievementDesc": "Fahre Lost Gravity mindestens 3x an einem Tag!",
-      "achievementIcon": "🌀",
-      "points": 40,
-      "actualPointsAwarded": 40,
-      "timestamp": "2026-08-17T19:06:33.460Z",
-      "reactions": {
-        "🔥": [],
-        "🍺": [],
-        "👑": [],
-        "💀": [],
-        "👏": []
-      },
-      "comments": []
-    },
-    {
-      "id": "feed_achieve_p_1786747056481_o5jo_side_coaster_marathon_10",
-      "type": "achievement",
-      "userId": "p_1786747056481_o5jo",
-      "userName": "grossek",
-      "userAvatar": "assets/avatar_belaestigungspanda.jpg",
-      "userHouse": "Haus 1",
-      "achievementId": "side_coaster_marathon_10",
-      "achievementTitle": "Iron Butt Marathon (10 Fahrten) 🔥",
-      "achievementDesc": "Fahre insgesamt 10 beliebige Achterbahnen an diesem Tag.",
-      "achievementIcon": "🔥",
-      "points": 50,
-      "actualPointsAwarded": 50,
-      "timestamp": "2026-08-17T19:06:32.310Z",
-      "reactions": {
-        "🔥": [],
-        "🍺": [],
-        "👑": [],
-        "💀": [],
-        "👏": []
-      },
-      "comments": []
-    },
-    {
-      "id": "feed_achieve_p_1786747056481_o5jo_side_goliath_king",
-      "type": "achievement",
-      "userId": "p_1786747056481_o5jo",
-      "userName": "grossek",
-      "userAvatar": "assets/avatar_belaestigungspanda.jpg",
-      "userHouse": "Haus 1",
-      "achievementId": "side_goliath_king",
-      "achievementTitle": "Goliath Mega-Master (3x) 🎢",
-      "achievementDesc": "Fahre Goliath mindestens 3x an einem Tag!",
-      "achievementIcon": "🎢",
-      "points": 40,
-      "actualPointsAwarded": 40,
-      "timestamp": "2026-08-17T19:03:46.818Z",
-      "reactions": {
-        "🔥": [],
-        "🍺": [],
-        "👑": [],
-        "💀": [],
-        "👏": []
-      },
-      "comments": []
-    },
-    {
-      "id": "feed_achieve_p_1786747056481_o5jo_side_drink_marathon_20",
-      "type": "achievement",
-      "userId": "p_1786747056481_o5jo",
-      "userName": "grossek",
-      "userAvatar": "assets/avatar_belaestigungspanda.jpg",
-      "userHouse": "Haus 1",
-      "achievementId": "side_drink_marathon_20",
-      "achievementTitle": "Unsterbliche Theken-Legende 👑 (20 Drinks Gesamt)",
-      "achievementDesc": "Habe mindestens 20 Drinks insgesamt im Pegel-Tracker verbucht – Ehrenplatz in der Ruhmeshalle!",
-      "achievementIcon": "👑",
-      "points": 100,
-      "actualPointsAwarded": 100,
-      "timestamp": "2026-08-17T18:55:01.781Z",
-      "reactions": {
-        "🔥": [],
-        "🍺": [],
-        "👑": [],
-        "💀": [],
-        "👏": []
-      },
-      "comments": []
-    },
-    {
-      "id": "feed_1786992373989_yzdey",
-      "type": "quest",
-      "userId": "p_1786747056481_o5jo",
-      "userName": "grossek",
-      "userAvatar": "assets/avatar_belaestigungspanda.jpg",
-      "userHouse": "Haus 1",
-      "questId": "visitor_queue_diplomat",
-      "questTitle": "Der Schlangen-Verhandler 🎟️ • 👥 Ganze Gruppe nach vorne gebracht!",
-      "questDescription": "Mit einer völlig absurden, charmanten Ausrede fremde Leute bequatschen, um sich ganz nach vorne durchzudrängeln.",
-      "questIcon": "🎟️",
-      "points": 60,
-      "basePoints": 60,
-      "actualPointsAwarded": 0,
-      "selectedOutcome": {
-        "id": "group",
-        "label": "👥 Ganze Gruppe nach vorne gebracht!",
-        "points": 60,
-        "isSuccess": true,
-        "badge": "+60 Pkt"
-      },
-      "isFaithBased": false,
-      "isHappyHour": false,
-      "witnesses": [
-        {
-          "userId": "p_1786989963387_h6xn",
-          "userName": "Fretisch",
-          "userAvatar": "assets/mascot_hard_gaan.jpg",
-          "confirmed": true,
-          "confirmedAt": "2026-08-17T18:46:23.408Z"
-        },
-        {
-          "userId": "p_1786991582715_ocb3",
-          "userName": "joya",
-          "userAvatar": "assets/mascot_fibi_singer.jpg",
-          "confirmed": false,
-          "confirmedAt": null
-        }
-      ],
-      "witnessPending": true,
-      "photo": null,
-      "isVideo": null,
-      "userComment": "",
-      "timestamp": "2026-08-17T18:46:13.989Z",
-      "requiresVoting": true,
-      "votingLabel": "Überzeugungskraft & Dreistigkeit",
-      "votes": {
-        "p_1786989963387_h6xn": 4
-      },
-      "votingUnlocked": false,
-      "reactions": {
-        "🔥": [],
-        "🍺": [],
-        "👑": [],
-        "💀": [],
-        "👏": []
-      },
-      "comments": [],
-      "avgRating": "4.0",
-      "voteCount": 1,
-      "votePercentage": 50
-    },
-    {
-      "id": "feed_achieve_p_1786747056481_o5jo_side_untamed_master",
-      "type": "achievement",
-      "userId": "p_1786747056481_o5jo",
-      "userName": "grossek",
-      "userAvatar": "assets/avatar_belaestigungspanda.jpg",
-      "userHouse": "Haus 1",
-      "achievementId": "side_untamed_master",
-      "achievementTitle": "Untamed Dreifach-Dröhnung (3x) 🪵",
-      "achievementDesc": "Fahre Untamed mindestens 3x an einem Tag!",
-      "achievementIcon": "🪵",
-      "points": 40,
-      "actualPointsAwarded": 40,
-      "timestamp": "2026-08-17T18:44:15.090Z",
-      "reactions": {
-        "🔥": [],
-        "🍺": [],
-        "👑": [
-          "p_1786747056481_o5jo"
-        ],
-        "💀": [],
-        "👏": []
-      },
-      "comments": []
-    },
-    {
-      "id": "feed_1786992255076_c6sp2",
-      "type": "quest",
-      "userId": "p_1786747056481_o5jo",
-      "userName": "grossek",
-      "userAvatar": "assets/avatar_belaestigungspanda.jpg",
-      "userHouse": "Haus 1",
-      "questId": "coaster_untamed",
-      "questTitle": "UNTAMED: Hard Gaan Bezwinger 🪵",
-      "questDescription": "Hybrid-Achterbahn UNTAMED mit Händen oben fahren & 'HARD GAAN!' beim First Drop brüllen.",
-      "questIcon": "🪵",
-      "points": 40,
-      "basePoints": 40,
-      "actualPointsAwarded": 40,
-      "selectedOutcome": null,
-      "isFaithBased": false,
-      "isHappyHour": false,
-      "witnesses": [],
-      "witnessPending": false,
-      "photo": null,
-      "isVideo": null,
-      "userComment": "",
-      "timestamp": "2026-08-17T18:44:15.076Z",
-      "requiresVoting": false,
-      "votingLabel": "Leistung & Ausführung",
-      "votes": {},
-      "votingUnlocked": true,
-      "reactions": {
-        "🔥": [],
-        "🍺": [],
-        "👑": [],
-        "💀": [],
-        "👏": []
-      },
-      "comments": []
-    },
-    {
-      "id": "feed_achieve_p_1786747056481_o5jo_side_coaster_marathon_5",
-      "type": "achievement",
-      "userId": "p_1786747056481_o5jo",
-      "userName": "grossek",
-      "userAvatar": "assets/avatar_belaestigungspanda.jpg",
-      "userHouse": "Haus 1",
-      "achievementId": "side_coaster_marathon_5",
-      "achievementTitle": "Coaster-Junkie (5 Fahrten) 🎢",
-      "achievementDesc": "Fahre mindestens 5 Achterbahnen an diesem Tag.",
-      "achievementIcon": "🎢",
-      "points": 25,
-      "actualPointsAwarded": 25,
-      "timestamp": "2026-08-17T18:44:08.050Z",
-      "reactions": {
-        "🔥": [],
-        "🍺": [],
-        "👑": [],
-        "💀": [],
-        "👏": []
-      },
-      "comments": []
-    },
-    {
-      "id": "feed_achieve_p_1786747056481_o5jo_side_yoy_duo",
-      "type": "achievement",
-      "userId": "p_1786747056481_o5jo",
-      "userName": "grossek",
-      "userAvatar": "assets/avatar_belaestigungspanda.jpg",
-      "userHouse": "Haus 1",
-      "achievementId": "side_yoy_duo",
-      "achievementTitle": "YOY Doppel-Duell (Chill & Thrill) ⚡",
-      "achievementDesc": "Fahre beide Spuren von YOY (Chill und Thrill) am selben Tag!",
-      "achievementIcon": "⚡",
-      "points": 45,
-      "actualPointsAwarded": 45,
-      "timestamp": "2026-08-17T18:43:54.186Z",
-      "reactions": {
-        "🔥": [],
-        "🍺": [],
-        "👑": [],
-        "💀": [],
-        "👏": []
-      },
-      "comments": []
-    },
-    {
-      "id": "feed_achieve_p_1786747056481_o5jo_side_beer_king_10",
-      "type": "achievement",
-      "userId": "p_1786747056481_o5jo",
-      "userName": "grossek",
-      "userAvatar": "assets/avatar_belaestigungspanda.jpg",
-      "userHouse": "Haus 1",
-      "achievementId": "side_beer_king_10",
-      "achievementTitle": "Bier-König 🍺 (10 Bier)",
-      "achievementDesc": "Habe 10 Bier im Pegel-Tracker verbucht.",
-      "achievementIcon": "🍺",
-      "points": 50,
-      "actualPointsAwarded": 50,
-      "timestamp": "2026-08-17T18:43:07.560Z",
-      "reactions": {
-        "🔥": [],
-        "🍺": [],
-        "👑": [],
-        "💀": [],
-        "👏": []
-      },
-      "comments": []
-    },
-    {
-      "id": "feed_achieve_p_1786747056481_o5jo_side_drink_marathon_15",
-      "type": "achievement",
-      "userId": "p_1786747056481_o5jo",
-      "userName": "grossek",
-      "userAvatar": "assets/avatar_belaestigungspanda.jpg",
-      "userHouse": "Haus 1",
-      "achievementId": "side_drink_marathon_15",
-      "achievementTitle": "Pegel-Gott 👑 (15 Drinks Gesamt)",
-      "achievementDesc": "Habe mindestens 15 Drinks insgesamt im Pegel-Tracker verbucht!",
-      "achievementIcon": "👑",
-      "points": 75,
-      "actualPointsAwarded": 75,
-      "timestamp": "2026-08-17T18:43:07.067Z",
-      "reactions": {
-        "🔥": [],
-        "🍺": [],
-        "👑": [],
-        "💀": [],
-        "👏": []
-      },
-      "comments": []
-    },
-    {
-      "id": "feed_achieve_p_1786747056481_o5jo_side_beer_king_5",
-      "type": "achievement",
-      "userId": "p_1786747056481_o5jo",
-      "userName": "grossek",
-      "userAvatar": "assets/avatar_belaestigungspanda.jpg",
-      "userHouse": "Haus 1",
-      "achievementId": "side_beer_king_5",
-      "achievementTitle": "Gerstensaft-Meister 🍺 (5 Bier)",
-      "achievementDesc": "Habe 5 Bier im Pegel-Tracker verbucht.",
-      "achievementIcon": "🍺",
-      "points": 25,
-      "actualPointsAwarded": 25,
-      "timestamp": "2026-08-17T18:43:06.392Z",
-      "reactions": {
-        "🔥": [],
-        "🍺": [],
-        "👑": [],
-        "💀": [],
-        "👏": []
-      },
-      "comments": []
-    },
-    {
-      "id": "feed_achieve_p_1786747056481_o5jo_side_drink_marathon_10",
-      "type": "achievement",
-      "userId": "p_1786747056481_o5jo",
-      "userName": "grossek",
-      "userAvatar": "assets/avatar_belaestigungspanda.jpg",
-      "userHouse": "Haus 1",
-      "achievementId": "side_drink_marathon_10",
-      "achievementTitle": "Pegel-Titan 👑 (10 Drinks Gesamt)",
-      "achievementDesc": "Habe mindestens 10 Drinks insgesamt im Pegel-Tracker verbucht.",
-      "achievementIcon": "👑",
-      "points": 50,
-      "actualPointsAwarded": 50,
-      "timestamp": "2026-08-17T18:43:05.991Z",
-      "reactions": {
-        "🔥": [],
-        "🍺": [],
-        "👑": [],
-        "💀": [],
-        "👏": []
-      },
-      "comments": []
-    },
-    {
-      "id": "feed_1786991268622_qm5w8",
-      "type": "quest",
-      "userId": "p_1786747056481_o5jo",
-      "userName": "grossek",
-      "userAvatar": "assets/avatar_belaestigungspanda.jpg",
-      "userHouse": "Haus 1",
-      "questId": "coaster_lost_gravity",
-      "questTitle": "LOST GRAVITY: Schwerelos 🌀",
-      "questDescription": "Lost Gravity auf den Wing-Seat Außenplätzen fliegen ohne Festhalten bis zur Schlussbremse.",
-      "questIcon": "🌀",
-      "points": 35,
-      "basePoints": 35,
-      "actualPointsAwarded": 35,
-      "selectedOutcome": null,
-      "isFaithBased": false,
-      "isHappyHour": false,
-      "witnesses": [],
-      "witnessPending": false,
-      "photo": null,
-      "isVideo": null,
-      "userComment": "",
-      "timestamp": "2026-08-17T18:27:48.622Z",
-      "requiresVoting": false,
-      "votingLabel": "Leistung & Ausführung",
-      "votes": {},
-      "votingUnlocked": true,
-      "reactions": {
-        "🔥": [],
-        "🍺": [],
-        "👑": [],
-        "💀": [],
-        "👏": []
-      },
-      "comments": []
-    },
-    {
-      "id": "feed_achieve_p_1786747056481_o5jo_side_longdrink_master_5",
-      "type": "achievement",
-      "userId": "p_1786747056481_o5jo",
-      "userName": "grossek",
-      "userAvatar": "assets/avatar_belaestigungspanda.jpg",
-      "userHouse": "Haus 1",
-      "achievementId": "side_longdrink_master_5",
-      "achievementTitle": "Cocktail-Liebhaber 🍹 (5 Longdrinks)",
-      "achievementDesc": "Habe 5 Longdrinks / Cocktails im Pegel-Tracker verbucht.",
-      "achievementIcon": "🍹",
-      "points": 35,
-      "actualPointsAwarded": 35,
-      "timestamp": "2026-08-17T18:26:42.570Z",
+      "achievementId": "side_shot_duo",
+      "achievementTitle": "Doppel-Shot Salve 🥃 (3 Shots)",
+      "achievementDesc": "Verbringe 3 Shots über den Tag verteilt im Pegel-Tracker.",
+      "achievementIcon": "🥃",
+      "points": 30,
+      "actualPointsAwarded": 30,
+      "timestamp": "2026-08-17T21:37:35.853Z",
       "reactions": {
         "🔥": [],
         "🍺": [],
@@ -571,10 +89,10 @@
     "multiplier": 2
   },
   "gameStatus": {
-    "isRunning": false,
-    "isEnded": true,
-    "startedAt": "2026-08-17T19:40:00.000Z",
-    "endedAt": "2026-08-17T19:36:08.502Z"
+    "isRunning": true,
+    "isEnded": false,
+    "startedAt": "2026-08-17T21:36:38.361Z"
   },
-  "version": 127
+  "version": 176,
+  "sympathyVotes": {}
 }

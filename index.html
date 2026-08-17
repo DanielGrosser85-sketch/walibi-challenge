@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Mr. oder Mrs. Walibi - Sauftour '26</title>
-  <link rel="stylesheet" href="css/style.css?v=2026_v12" />
+  <link rel="stylesheet" href="css/style.css?v=2026_v24" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#ffcc00" />
 </head>
@@ -33,7 +33,7 @@
       </div>
 
       <div class="header-actions">
-        <button class="icon-btn" id="btnAdminPanel" onclick="ProfileModule.openAdminModal()" title="👑 Admin-Konsole (grossek)" style="display: none; border-color: var(--walibi-yellow); background: rgba(255,204,0,0.25);">👑</button>
+        <button class="icon-btn" id="btnAdminPanel" onclick="ProfileModule.openAdminModal()" title="👑 Admin-Konsole (grossek)" style="border-color: var(--walibi-yellow); background: rgba(255,204,0,0.25);">👑</button>
         <button class="icon-btn" id="btnHeaderMap" onclick="ParkMapModule.openModal()" title="🗺️ Walibi Park-Map (BETA)" style="border-color: var(--walibi-yellow); background: rgba(255,204,0,0.22); font-size: 16px;">🗺️</button>
         <button class="icon-btn btn-menu-accent" id="btnQuickMenuTrigger" onclick="app.openQuickMenu()" title="⚡ Menü & Werkzeuge">⚡</button>
       </div>
@@ -196,12 +196,6 @@
         <!-- Gefüllt per JS -->
       </div>
     </main>
-
-    <!-- FLOATING QUICK-COUNTER FAB -->
-    <button class="floating-counter-fab" id="quickCounterFab" title="Schnellzähler öffnen">
-      <span>🍺</span>
-      <span>Schnellzähler</span>
-    </button>
 
     <!-- BOTTOM NAVIGATION (4 TABS) -->
     <nav class="bottom-nav-bar">
@@ -510,9 +504,13 @@
             👤 Profil wechseln
           </button>
           <button type="button" class="btn-primary" onclick="ProfileModule.logout()" style="flex: 1; padding: 8px 10px; font-size: 12px; background: rgba(225,29,72,0.25); border: 1.5px solid #f43f5e; color: #fda4af; font-weight: 800;">
-            🚪 Abmelden (Code neu)
+            🚪 Abmelden (Code)
           </button>
         </div>
+
+        <button type="button" class="btn-primary" onclick="ProfileModule.openAdminModal()" style="margin-top: 8px; width: 100%; padding: 8px 10px; font-size: 12px; background: rgba(255,204,0,0.18); border: 1.5px solid var(--walibi-yellow); color: var(--walibi-yellow); font-weight: 900;">
+          👑 Admin-Konsole öffnen (grossek)
+        </button>
       </form>
     </div>
   </div>
@@ -727,22 +725,6 @@
     </div>
   </div>
 
-  <!-- 6. SCHNELLZÄHLER MODAL -->
-  <div id="counterModal" class="modal-overlay hidden">
-    <div class="modal-container">
-      <div class="modal-header">
-        <h2 class="modal-title">🍺 Flüssige Währung</h2>
-        <button class="btn-close-modal" id="closeCounterModal">✕</button>
-      </div>
-
-      <div id="counterUserSummary" style="font-size: 13px; margin-bottom: 8px; color: var(--text-muted); font-weight: 700;"></div>
-
-      <div class="counter-grid" id="counterGridContainer">
-        <!-- Gefüllt per JS -->
-      </div>
-    </div>
-  </div>
-
   <!-- 7. FOTO VOLLBILD VIEWER -->
   <div id="photoViewerModal" class="modal-overlay hidden" style="padding: 0;">
     <div style="position: relative; max-width: 100vw; max-height: 100vh; display: flex; align-items: center; justify-content: center;">
@@ -915,6 +897,26 @@
   </div>
 
   <!-- ========================================== -->
+  <!-- 15. 🔍 AVATAR LUPEN-ZOOM LIGHTBOX MODAL    -->
+  <!-- ========================================== -->
+  <div id="avatarLensLightboxModal" class="modal-overlay hidden" style="z-index: 560; background: rgba(5,8,16,0.94);" onclick="ProfileModule.closeAvatarLensModal()">
+    <div class="modal-container" style="max-width: 360px; text-align: center; border: 3.5px solid var(--walibi-yellow); box-shadow: 0 0 45px rgba(255,204,0,0.6);" onclick="event.stopPropagation()">
+      <div class="modal-header" style="justify-content: flex-end; margin-bottom: 6px;">
+        <button class="btn-close-modal" onclick="ProfileModule.closeAvatarLensModal()">✕</button>
+      </div>
+      <div style="display: flex; justify-content: center; margin-bottom: 12px;">
+        <img id="lensModalAvatarImg" src="" style="width: 220px; height: 220px; border-radius: 50%; object-fit: cover; border: 4px solid var(--walibi-yellow); box-shadow: 0 0 30px rgba(255,204,0,0.7);" alt="Zoom Avatar" />
+      </div>
+      <h3 id="lensModalAvatarTitle" style="color: #fff; font-size: 21px; font-family: var(--font-headline); letter-spacing: 0.8px; margin-bottom: 4px;">Name</h3>
+      <div id="lensModalAvatarSubtitle" style="color: var(--walibi-pink); font-size: 13px; font-weight: 800; margin-bottom: 12px;">Untertitel</div>
+      <div id="lensModalAvatarQuote" style="background: rgba(0,0,0,0.5); border-left: 3.5px solid var(--walibi-yellow); padding: 8px 12px; border-radius: 0 8px 8px 0; font-size: 12.5px; font-style: italic; color: var(--walibi-yellow); font-weight: 700; margin-bottom: 16px; text-align: left;"></div>
+      <button type="button" id="btnLensModalPick" class="btn-primary" style="background: var(--gradient-gold); color: #000; font-weight: 900; border: 2.5px solid #fff; font-size: 16px; box-shadow: 0 0 16px rgba(255,204,0,0.5);">
+        ✅ DIESEN AVATAR WÄHLEN
+      </button>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
   <!-- 12. 📷 IN-APP LIVE KAMERA MODAL            -->
   <!-- ========================================== -->
   <div id="inAppCameraModal" class="modal-overlay hidden" style="z-index: 550; padding: 0; background: #000;">
@@ -995,24 +997,24 @@
   </div>
 
   <!-- JAVASCRIPT MODULES -->
-  <script src="js/audio.js?v=2026_v15"></script>
-  <script src="js/data/rulesData.js?v=2026_v15"></script>
-  <script src="js/data/mascotsData.js?v=2026_v15"></script>
-  <script src="js/data/partyQuotesData.js?v=2026_v15"></script>
-  <script src="js/data/attractionsData.js?v=2026_v15"></script>
-  <script src="js/data/questsData.js?v=2026_v15"></script>
-  <script src="js/data/parkMapData.js?v=2026_v15"></script>
-  <script src="js/camera.js?v=2026_v15"></script>
-  <script src="js/store.js?v=2026_v15"></script>
-  <script src="js/profile.js?v=2026_v15"></script>
-  <script src="js/parkMap.js?v=2026_v15"></script>
-  <script src="js/parkGuide.js?v=2026_v15"></script>
-  <script src="js/quests.js?v=2026_v15"></script>
-  <script src="js/counter.js?v=2026_v15"></script>
-  <script src="js/feed.js?v=2026_v15"></script>
-  <script src="js/leaderboard.js?v=2026_v15"></script>
-  <script src="js/awards.js?v=2026_v15"></script>
-  <script src="js/app.js?v=2026_v15"></script>
+  <script src="js/audio.js?v=2026_v24"></script>
+  <script src="js/data/rulesData.js?v=2026_v24"></script>
+  <script src="js/data/mascotsData.js?v=2026_v24"></script>
+  <script src="js/data/partyQuotesData.js?v=2026_v24"></script>
+  <script src="js/data/attractionsData.js?v=2026_v24"></script>
+  <script src="js/data/questsData.js?v=2026_v24"></script>
+  <script src="js/data/parkMapData.js?v=2026_v24"></script>
+  <script src="js/camera.js?v=2026_v24"></script>
+  <script src="js/store.js?v=2026_v24"></script>
+  <script src="js/profile.js?v=2026_v24"></script>
+  <script src="js/parkMap.js?v=2026_v24"></script>
+  <script src="js/parkGuide.js?v=2026_v24"></script>
+  <script src="js/quests.js?v=2026_v24"></script>
+  <script src="js/counter.js?v=2026_v24"></script>
+  <script src="js/feed.js?v=2026_v24"></script>
+  <script src="js/leaderboard.js?v=2026_v24"></script>
+  <script src="js/awards.js?v=2026_v24"></script>
+  <script src="js/app.js?v=2026_v24"></script>
 
 </body>
 </html>

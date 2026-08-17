@@ -793,22 +793,25 @@ body {
 
 .drinks-tracker-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
-  gap: 6px;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
 }
 
 .tracker-item-pill {
   background: var(--game-panel-light);
-  border: 2px solid rgba(255, 255, 255, 0.15);
+  border: 2px solid rgba(255, 255, 255, 0.16);
   border-radius: var(--radius-md);
-  padding: 7px 8px;
+  padding: 8px 4px 6px;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  gap: 4px;
+  text-align: center;
+  gap: 3px;
   cursor: pointer;
   box-shadow: 0 3px 0 rgba(0,0,0,0.35);
   transition: all 0.15s ease;
+  user-select: none;
+  touch-action: manipulation;
 }
 
 .tracker-item-pill:hover, .tracker-item-pill:active {
@@ -818,41 +821,50 @@ body {
 }
 
 .tracker-item-icon {
-  font-size: 20px;
+  font-size: 24px;
+  line-height: 1;
 }
 
 .tracker-item-info {
   display: flex;
   flex-direction: column;
-  line-height: 1.1;
-  flex: 1;
+  align-items: center;
+  width: 100%;
+  line-height: 1.15;
 }
 
 .tracker-item-name {
-  font-size: 10px;
+  font-size: 10.5px;
   color: var(--text-muted);
   font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .tracker-item-count {
   font-size: 14px;
   font-weight: 900;
   color: #fff;
+  margin-top: 1px;
 }
 
 .tracker-item-add-btn {
   background: var(--gradient-red);
   color: #fff;
   border: 1.5px solid #fff;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 900;
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: 0 2px 0 rgba(0,0,0,0.4);
+  margin-top: 2px;
+  pointer-events: none;
 }
 
 /* --- VIEWS --- */
@@ -2968,22 +2980,68 @@ body {
 .lore-card-header {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.lore-card-avatar-wrap {
+  position: relative;
+  width: 82px;
+  height: 82px;
+  flex-shrink: 0;
+  cursor: zoom-in;
+  user-select: none;
 }
 
 .lore-card-avatar {
-  width: 52px;
-  height: 52px;
+  width: 82px;
+  height: 82px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2.5px solid var(--walibi-yellow);
-  box-shadow: 0 0 12px rgba(255, 204, 0, 0.4);
-  flex-shrink: 0;
+  border: 3px solid var(--walibi-yellow);
+  box-shadow: 0 0 16px rgba(255, 204, 0, 0.45);
+  display: block;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease, border-radius 0.25s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.lore-card-avatar-wrap:hover .lore-card-avatar {
+  transform: scale(1.06);
+  border-color: #fff;
+}
+
+.lore-avatar-lens-btn {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  background: rgba(10, 15, 30, 0.92);
+  border: 1.5px solid var(--walibi-yellow);
+  color: var(--walibi-yellow);
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+  pointer-events: none;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.6);
+}
+
+/* LUPEN-VERDOPPLUNG / VERGRÖSSERUNG */
+.lore-card-avatar.is-zoomed {
+  transform: scale(2.2);
+  z-index: 100;
+  border-radius: 18px;
+  border: 3.5px solid var(--walibi-yellow);
+  box-shadow: 0 12px 45px rgba(0, 0, 0, 0.95), 0 0 35px rgba(255, 204, 0, 0.85);
+  cursor: zoom-out;
 }
 
 .lore-card-title {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 900;
   color: #ffffff;
   line-height: 1.2;
