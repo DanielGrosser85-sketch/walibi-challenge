@@ -490,8 +490,29 @@ const QuestsModule = {
     if (isVideo) {
       if (previewImg) previewImg.classList.add("hidden");
       if (previewVid) {
-        previewVid.src = b64;
+        try {
+          if (b64.startsWith("data:video")) {
+            const marker = ";base64,";
+            const idx = b64.indexOf(marker);
+            if (idx !== -1) {
+              const mime = b64.substring(5, idx);
+              const b64Data = b64.substring(idx + marker.length);
+              const byteChars = atob(b64Data);
+              const byteNums = new Array(byteChars.length);
+              for (let i = 0; i < byteChars.length; i++) byteNums[i] = byteChars.charCodeAt(i);
+              const blob = new Blob([new Uint8Array(byteNums)], { type: mime });
+              previewVid.src = URL.createObjectURL(blob);
+            } else {
+              previewVid.src = b64;
+            }
+          } else {
+            previewVid.src = b64;
+          }
+        } catch (e) {
+          previewVid.src = b64;
+        }
         previewVid.classList.remove("hidden");
+        previewVid.load();
       }
     } else {
       if (previewVid) previewVid.classList.add("hidden");
@@ -528,12 +549,12 @@ const QuestsModule = {
   },
 
   handlePhotoCapture(event) {
-    const file = event.target.files[0];
+    const file = event.target.files && event.target.files[0];
     if (!file) return;
 
     if (window.GameAudio) window.GameAudio.playClick();
 
-    const isVideo = file.type.startsWith('video/');
+    const isVideo = file.type.startsWith('video/') || file.name.match(/\.(mp4|mov|webm|m4v|3gp)$/i);
     const reader = new FileReader();
 
     if (isVideo) {

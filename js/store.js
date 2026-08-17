@@ -142,10 +142,22 @@ class AppStore {
       if (this.state.currentUser && this.state.currentUser.id) {
         localStorage.setItem(this.USER_KEY, this.state.currentUser.id);
       }
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.state));
+
+      // Sicheres Klonen für localStorage: Große Base64-Strings im Feed niemals im 5MB localStorage speichern
+      const safeState = { ...this.state };
+      if (Array.isArray(safeState.feed)) {
+        safeState.feed = safeState.feed.map(item => {
+          if (item && item.photo && item.photo.startsWith("data:")) {
+            return { ...item, photo: null };
+          }
+          return item;
+        });
+      }
+
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(safeState));
       this.notifyListeners();
     } catch (e) {
-      console.error("Fehler beim Speichern in localStorage", e);
+      console.warn("Fehler beim Speichern in localStorage", e);
     }
   }
 
@@ -965,6 +977,8 @@ class AppStore {
       userComment: userComment || ""
     };
 
+    const isVideo = Boolean(photoBase64 && (photoBase64.startsWith("data:video") || photoBase64.endsWith(".mp4") || photoBase64.endsWith(".webm") || photoBase64.endsWith(".mov") || photoBase64.endsWith(".m4v")));
+
     const localFeedItem = {
       id: "feed_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
       type: "quest",
@@ -985,6 +999,7 @@ class AppStore {
       witnesses: witnesses,
       witnessPending: requiresWitnessPending,
       photo: photoBase64 || null,
+      isVideo: isVideo,
       userComment: userComment || "",
       timestamp: new Date().toISOString(),
       requiresVoting: requiresVoting,
@@ -1091,6 +1106,8 @@ class AppStore {
       photoBase64: photoBase64 || null
     };
 
+    const isVideo = Boolean(photoBase64 && (photoBase64.startsWith("data:video") || photoBase64.endsWith(".mp4") || photoBase64.endsWith(".webm") || photoBase64.endsWith(".mov") || photoBase64.endsWith(".m4v")));
+
     const localFeedItem = {
       id: "feed_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
       type: "social",
@@ -1098,8 +1115,9 @@ class AppStore {
       userName: player.name,
       userAvatar: player.avatar,
       userHouse: player.house,
-      text: text || (photoBase64 ? "Schnappschuss geteilt 📸" : "Status geteilt 📝"),
+      text: text || (isVideo ? "Video geteilt 🎥" : (photoBase64 ? "Schnappschuss geteilt 📸" : "Status geteilt 📝")),
       photo: photoBase64 || null,
+      isVideo: isVideo,
       points: points,
       basePoints: basePoints,
       actualPointsAwarded: points,

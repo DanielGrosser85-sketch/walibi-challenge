@@ -196,8 +196,8 @@ function parseJsonBody(req, callback) {
   let body = '';
   req.on('data', chunk => {
     body += chunk.toString();
-    // 35MB Limit für Bild- & Video-Uploads
-    if (body.length > 35 * 1024 * 1024) {
+    // 80MB Limit für hochauflösende Video-Uploads
+    if (body.length > 80 * 1024 * 1024) {
       req.destroy();
     }
   });
@@ -443,7 +443,7 @@ function handleApiRequest(pathname, req, res) {
         });
       }
 
-      const isVideo = photoUrl && (photoUrl.endsWith('.mp4') || photoUrl.endsWith('.webm') || photoUrl.endsWith('.mov'));
+      const isVideo = Boolean(photoUrl && (photoUrl.endsWith('.mp4') || photoUrl.endsWith('.webm') || photoUrl.endsWith('.mov') || photoUrl.endsWith('.m4v') || (data.photoBase64 && data.photoBase64.startsWith('data:video'))));
 
       const feedItem = {
         id: "feed_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
@@ -557,7 +557,7 @@ function handleApiRequest(pathname, req, res) {
         if (savedUrl) photoUrl = savedUrl;
       }
 
-      const isVideo = photoUrl && (photoUrl.endsWith('.mp4') || photoUrl.endsWith('.webm') || photoUrl.endsWith('.mov'));
+      const isVideo = Boolean(photoUrl && (photoUrl.endsWith('.mp4') || photoUrl.endsWith('.webm') || photoUrl.endsWith('.mov') || photoUrl.endsWith('.m4v') || (data.photoBase64 && data.photoBase64.startsWith('data:video'))));
       // 5 Punkte für einfache Text-Nachricht, 10 Punkte für Bild / Video (2x bei Happy Hour)
       const multiplier = getPointsMultiplier();
       const basePoints = photoUrl ? 10 : 5;

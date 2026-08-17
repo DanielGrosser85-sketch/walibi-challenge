@@ -924,7 +924,12 @@
       <div class="camera-top-bar">
         <button class="camera-icon-btn" id="closeInAppCamera" title="Kamera schließen">✕</button>
         <span class="camera-modal-title" id="cameraModalTitle">📸 Walibi Live-Kamera</span>
-        <button class="camera-icon-btn" id="btnCameraTimer" title="3s Selbstauslöser">⏱️</button>
+        <div style="display: flex; gap: 6px; align-items: center;">
+          <label class="camera-icon-btn" title="Mit nativer Video-Kamera aufnehmen" style="cursor: pointer; background: rgba(225,29,72,0.3); border-color: #f43f5e;" onclick="document.getElementById('cameraModalFallbackVideoInput').click()">
+            🎥
+          </label>
+          <button class="camera-icon-btn" id="btnCameraTimer" title="3s Selbstauslöser">⏱️</button>
+        </div>
       </div>
 
       <!-- VIEWFINDER / LIVE STREAM BEREICH -->

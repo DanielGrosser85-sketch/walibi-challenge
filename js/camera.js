@@ -455,6 +455,7 @@ const CameraModule = {
     }
 
     const blob = new Blob(this.recordedChunks, { type: mimeType });
+    const blobUrl = URL.createObjectURL(blob);
     const reader = new FileReader();
 
     reader.onloadend = () => {
@@ -472,7 +473,7 @@ const CameraModule = {
       if (freezeImg) freezeImg.classList.add("hidden");
 
       if (freezeVideo) {
-        freezeVideo.src = b64;
+        freezeVideo.src = blobUrl;
         freezeVideo.classList.remove("hidden");
         freezeVideo.load();
         freezeVideo.play().catch(() => {});
@@ -489,7 +490,8 @@ const CameraModule = {
     if (!file) return;
 
     if (window.GameAudio) window.GameAudio.playClick();
-    const isVideo = file.type.startsWith("video/");
+    const isVideo = file.type.startsWith("video/") || file.name.match(/\.(mp4|mov|webm|m4v|3gp)$/i);
+    const blobUrl = URL.createObjectURL(file);
     const reader = new FileReader();
 
     if (isVideo) {
@@ -510,8 +512,9 @@ const CameraModule = {
         if (fallbackBox) fallbackBox.classList.add("hidden");
 
         if (freezeVideo) {
-          freezeVideo.src = b64;
+          freezeVideo.src = blobUrl;
           freezeVideo.classList.remove("hidden");
+          freezeVideo.load();
           freezeVideo.play().catch(() => {});
         }
 

@@ -106,8 +106,29 @@ const FeedModule = {
     if (isVideo) {
       if (previewImg) previewImg.classList.add("hidden");
       if (previewVid) {
-        previewVid.src = base64;
+        try {
+          if (base64.startsWith("data:video")) {
+            const marker = ";base64,";
+            const idx = base64.indexOf(marker);
+            if (idx !== -1) {
+              const mime = base64.substring(5, idx);
+              const b64Data = base64.substring(idx + marker.length);
+              const byteChars = atob(b64Data);
+              const byteNums = new Array(byteChars.length);
+              for (let i = 0; i < byteChars.length; i++) byteNums[i] = byteChars.charCodeAt(i);
+              const blob = new Blob([new Uint8Array(byteNums)], { type: mime });
+              previewVid.src = URL.createObjectURL(blob);
+            } else {
+              previewVid.src = base64;
+            }
+          } else {
+            previewVid.src = base64;
+          }
+        } catch (e) {
+          previewVid.src = base64;
+        }
         previewVid.classList.remove("hidden");
+        previewVid.load();
       }
     } else {
       if (previewVid) previewVid.classList.add("hidden");
@@ -117,7 +138,7 @@ const FeedModule = {
       }
     }
     if (removeBtn) removeBtn.classList.remove("hidden");
-    if (submitBtn) submitBtn.textContent = "🚀 Schnappschuss posten (+10 Pkt)";
+    if (submitBtn) submitBtn.textContent = isVideo ? "🚀 Video posten (+10 Pkt)" : "🚀 Schnappschuss posten (+10 Pkt)";
   },
 
   setupSocialPostModal() {
@@ -182,12 +203,13 @@ const FeedModule = {
   },
 
   handleSocialPhotoCapture(event) {
-    const file = event.target.files[0];
+    const file = event.target.files && event.target.files[0];
     if (!file) return;
 
     if (window.GameAudio) window.GameAudio.playClick();
 
-    const isVideo = file.type.startsWith('video/');
+    const isVideo = file.type.startsWith('video/') || file.name.match(/\.(mp4|mov|webm|m4v|3gp)$/i);
+    const blobUrl = URL.createObjectURL(file);
     const reader = new FileReader();
 
     if (isVideo) {
@@ -199,13 +221,16 @@ const FeedModule = {
         const previewImg = document.getElementById("socialPhotoPreview");
         const previewVid = document.getElementById("socialVideoPreview");
         const removeBtn = document.getElementById("btnRemoveSocialPhoto");
+        const submitBtn = document.getElementById("btnSubmitSocialPost");
 
         if (previewImg) previewImg.classList.add("hidden");
         if (previewVid) {
-          previewVid.src = b64;
+          previewVid.src = blobUrl;
           previewVid.classList.remove("hidden");
+          previewVid.load();
         }
         if (removeBtn) removeBtn.classList.remove("hidden");
+        if (submitBtn) submitBtn.textContent = "🚀 Video posten (+10 Pkt)";
       };
       reader.readAsDataURL(file);
     } else {
