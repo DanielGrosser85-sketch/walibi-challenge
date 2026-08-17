@@ -300,14 +300,15 @@ class AppStore {
     }
 
     const activeUserId = localStorage.getItem(this.USER_KEY) || localStorage.getItem("walibi_active_user_id") || localStorage.getItem("walibi_current_user_id") || (this.state.currentUser ? this.state.currentUser.id : null);
+    const isAdmin = (window.ProfileModule && window.ProfileModule.isAdminUser && window.ProfileModule.isAdminUser()) || (localStorage.getItem("walibi_access_code") === "1008");
 
     if (activeUserId) {
       const myUpdated = this.state.players.find(p => p.id === activeUserId);
-      if (myUpdated) {
+      if (myUpdated && (isAdmin || myUpdated.name.toLowerCase() !== "grossek")) {
         this.state.currentUser = { ...myUpdated };
         this.checkAndAutoUnlockSideQuests(activeUserId);
       }
-    } else if ((window.ProfileModule && window.ProfileModule.isAdminUser && window.ProfileModule.isAdminUser()) || (localStorage.getItem("walibi_access_code") === "1008")) {
+    } else if (isAdmin) {
       let grossek = this.state.players.find(p => p.name.toLowerCase() === "grossek");
       if (grossek) {
         this.state.currentUser = { ...grossek };
@@ -315,7 +316,7 @@ class AppStore {
         localStorage.setItem("walibi_active_user_id", grossek.id);
         this.checkAndAutoUnlockSideQuests(grossek.id);
       }
-    } else if (this.state.currentUser) {
+    } else if (this.state.currentUser && (isAdmin || this.state.currentUser.name.toLowerCase() !== "grossek")) {
       const myUpdated = this.state.players.find(p => p.id === this.state.currentUser.id);
       if (myUpdated) {
         this.state.currentUser = { ...myUpdated };

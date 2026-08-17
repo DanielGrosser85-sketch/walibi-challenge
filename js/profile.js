@@ -112,18 +112,31 @@ const ProfileModule = {
       if (errEl) errEl.textContent = "";
       if (window.GameAudio) window.GameAudio.playClick();
 
-      // Falls vorher Grossek im LocalStorage war: entfernen!
-      const savedUserId = localStorage.getItem("walibi_active_user_id");
-      if (savedUserId && window.store && window.store.state) {
-        const savedPlayer = window.store.state.players.find(p => p.id === savedUserId);
-        if (savedPlayer && savedPlayer.name.toLowerCase() === "grossek") {
-          localStorage.removeItem("walibi_active_user_id");
-          if (window.store.state.currentUser) window.store.state.currentUser = null;
+      // Bei 6969 Login: Vorherigen Admin Grossek IMMER entfernen!
+      const savedUserId = localStorage.getItem("walibi_active_user_id") || localStorage.getItem("walibi_current_user_id");
+      let activePlayer = (savedUserId && window.store && window.store.state && Array.isArray(window.store.state.players)) 
+        ? window.store.state.players.find(p => p.id === savedUserId) 
+        : null;
+
+      if (!activePlayer || activePlayer.name.toLowerCase() === "grossek") {
+        localStorage.removeItem("walibi_active_user_id");
+        localStorage.removeItem("walibi_current_user_id");
+        if (window.store && window.store.state) {
+          window.store.state.currentUser = null;
+          window.store.saveLocalState();
         }
+        this.updateHeaderProfile();
+        if (window.app && window.app.renderAllViews) window.app.renderAllViews();
+        // Öffne direkt die Spielerauswahl-Maske!
+        this.openProfileSelectModal();
+      } else {
+        if (window.store && window.store.state) {
+          window.store.state.currentUser = activePlayer;
+        }
+        this.updateHeaderProfile();
+        if (window.app && window.app.renderAllViews) window.app.renderAllViews();
       }
 
-      this.ensureCurrentUser();
-      this.updateHeaderProfile();
       if (window.app && window.app.showToast) {
         window.app.showToast(`🚀 Zugang freigeschaltet! Willkommen bei der Sauftour '26.`);
       }
@@ -145,6 +158,7 @@ const ProfileModule = {
 
     if (window.store && window.store.state) {
       window.store.state.currentUser = null;
+      window.store.saveLocalState();
     }
 
     // Alle Modale schließen
@@ -614,24 +628,26 @@ const ProfileModule = {
     const state = window.store ? window.store.state : null;
     if (!state) return;
 
+    const isAdmin = this.isAdminUser();
+
     // 1. Zuerst prüfen, ob bereits ein aktiver Spieler im LocalStorage oder State existiert!
     const savedUserId = localStorage.getItem("walibi_active_user_id") || localStorage.getItem("walibi_current_user_id");
     if (savedUserId && state.players && state.players.length > 0) {
       const found = state.players.find(p => p.id === savedUserId);
-      if (found) {
+      if (found && (isAdmin || found.name.toLowerCase() !== "grossek")) {
         state.currentUser = found;
         return;
       }
     }
 
-    if (state.currentUser) {
+    if (state.currentUser && (isAdmin || state.currentUser.name.toLowerCase() !== "grossek")) {
       localStorage.setItem("walibi_active_user_id", state.currentUser.id);
       localStorage.setItem("walibi_current_user_id", state.currentUser.id);
       return;
     }
 
     // 2. Nur wenn noch KEIN Spieler gewählt wurde und Admin-Code 1008 vorliegt: Grossek als Standard
-    if (this.isAdminUser()) {
+    if (isAdmin) {
       let grossek = state.players ? state.players.find(p => p.name.toLowerCase() === "grossek") : null;
       if (!grossek && window.store) {
         grossek = window.store.addPlayer("grossek", "Haus 1", "assets/mascot_fox.jpg");
@@ -644,7 +660,11 @@ const ProfileModule = {
       return;
     }
 
-    // 3. Wenn noch kein Spieler gewählt ist:
+    // 3. Wenn noch kein Spieler gewählt ist (für 6969 Mitspieler):
+    state.currentUser = null;
+    localStorage.removeItem("walibi_active_user_id");
+    localStorage.removeItem("walibi_current_user_id");
+
     if (state.players && state.players.length > 0) {
       this.openProfileSelectModal();
     } else {
