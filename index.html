@@ -33,7 +33,7 @@
       </div>
 
       <div class="header-actions">
-        <button class="icon-btn" id="btnAdminPanel" onclick="ProfileModule.openAdminModal()" title="👑 Admin-Konsole (grossek)" style="border-color: var(--walibi-yellow); background: rgba(255,204,0,0.25);">👑</button>
+        <button class="icon-btn" id="btnAdminPanel" onclick="ProfileModule.openAdminModal()" title="👑 Admin-Konsole (grossek)" style="display: none; border-color: var(--walibi-yellow); background: rgba(255,204,0,0.25);">👑</button>
         <button class="icon-btn" id="btnHeaderMap" onclick="ParkMapModule.openModal()" title="🗺️ Walibi Park-Map (BETA)" style="border-color: var(--walibi-yellow); background: rgba(255,204,0,0.22); font-size: 16px;">🗺️</button>
         <button class="icon-btn btn-menu-accent" id="btnQuickMenuTrigger" onclick="app.openQuickMenu()" title="⚡ Menü & Werkzeuge">⚡</button>
       </div>
@@ -236,15 +236,14 @@
       </div>
 
       <!-- Foto / Video Upload / Kamera -->
-      <div class="form-group">
-        <label class="form-label">Foto / Schnappschuss hinzufügen (+10 Pkt statt +5 Pkt)</label>
+        <label class="form-label">Foto / Video hinzufügen (+10 Pkt statt +5 Pkt)</label>
         <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-          <button type="button" class="btn-game-camera" style="flex: 1; text-align: center; justify-content: center; cursor: pointer;" onclick="CameraModule.open({ title: '📸 Schnappschuss teilen', facingMode: 'environment', onCapture: (b64, isVid) => FeedModule.setCapturedPhoto(b64, isVid) })">
-            📸 Live-Kamera
+          <button type="button" class="btn-game-camera" style="flex: 1; text-align: center; justify-content: center; cursor: pointer;" onclick="CameraModule.open({ title: '📸 Foto / Video teilen', facingMode: 'environment', onCapture: (b64, isVid) => FeedModule.setCapturedPhoto(b64, isVid) })">
+            📸 Live-Kamera / Video
           </button>
           <label class="btn-game-gallery" style="flex: 1; text-align: center; justify-content: center; cursor: pointer;">
             🖼️ Galerie
-            <input type="file" accept="image/*" id="socialGalleryInput" style="display: none;" />
+            <input type="file" accept="image/*,video/*" id="socialGalleryInput" style="display: none;" />
           </label>
         </div>
         <img id="socialPhotoPreview" class="camera-preview-img hidden" alt="Vorschau" />
@@ -508,7 +507,7 @@
           </button>
         </div>
 
-        <button type="button" class="btn-primary" onclick="ProfileModule.openAdminModal()" style="margin-top: 8px; width: 100%; padding: 8px 10px; font-size: 12px; background: rgba(255,204,0,0.18); border: 1.5px solid var(--walibi-yellow); color: var(--walibi-yellow); font-weight: 900;">
+        <button type="button" class="btn-primary" id="myProfileAdminBtn" onclick="ProfileModule.openAdminModal()" style="display: none; margin-top: 8px; width: 100%; padding: 8px 10px; font-size: 12px; background: rgba(255,204,0,0.18); border: 1.5px solid var(--walibi-yellow); color: var(--walibi-yellow); font-weight: 900;">
           👑 Admin-Konsole öffnen (grossek)
         </button>
       </form>
@@ -917,7 +916,7 @@
   </div>
 
   <!-- ========================================== -->
-  <!-- 12. 📷 IN-APP LIVE KAMERA MODAL            -->
+  <!-- 12. 📷 IN-APP LIVE KAMERA & VIDEO MODAL     -->
   <!-- ========================================== -->
   <div id="inAppCameraModal" class="modal-overlay hidden" style="z-index: 550; padding: 0; background: #000;">
     <div class="inapp-camera-container">
@@ -932,7 +931,15 @@
       <div class="camera-viewfinder-wrapper">
         <video id="cameraLiveStream" class="camera-live-video" autoplay playsinline muted></video>
         <img id="cameraFreezePreview" class="camera-freeze-img hidden" alt="Aufgenommenes Foto" />
+        <video id="cameraFreezeVideoPreview" class="camera-freeze-video hidden" controls playsinline loop></video>
         
+        <!-- LIVE VIDEO RECORDING INDICATOR -->
+        <div id="cameraRecordingIndicator" class="camera-rec-badge hidden">
+          <span class="rec-dot"></span>
+          <span id="cameraRecTime">REC 00:00</span>
+          <span class="rec-limit">/ 00:30</span>
+        </div>
+
         <!-- COUNTDOWN OVERLAY -->
         <div id="cameraTimerOverlay" class="camera-timer-overlay hidden">
           <span id="cameraTimerCount" class="camera-timer-number">3</span>
@@ -952,19 +959,29 @@
 
         <!-- FALLBACK BOX FALLS KEIN WEBRTC ZUGRIFF -->
         <div id="cameraFallbackBox" class="camera-fallback-box hidden">
-          <div style="font-size: 42px; margin-bottom: 8px;">📷</div>
+          <div style="font-size: 42px; margin-bottom: 8px;">📷 / 🎥</div>
           <div id="cameraFallbackMsg" style="font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 16px;">Kamera wird vorbereitet...</div>
           <div style="display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 280px;">
             <label class="btn-primary" style="background: var(--gradient-red); cursor: pointer; text-align: center; font-size: 14px;">
-              📸 Kamera öffnen
+              📸 Foto aufnehmen
               <input type="file" accept="image/*" capture="environment" id="cameraModalFallbackCameraInput" style="display: none;" />
             </label>
+            <label class="btn-primary" style="background: linear-gradient(135deg, #e11d48, #9333ea); cursor: pointer; text-align: center; font-size: 14px; border: 1.5px solid #ffcc00;">
+              🎥 Video aufnehmen
+              <input type="file" accept="video/*" capture="environment" id="cameraModalFallbackVideoInput" style="display: none;" />
+            </label>
             <label class="btn-primary" style="background: #334155; cursor: pointer; text-align: center; font-size: 14px;">
-              🖼️ Aus Galerie wählen
-              <input type="file" accept="image/*" id="cameraModalGalleryInput" style="display: none;" />
+              🖼️ Aus Galerie wählen (Foto / Video)
+              <input type="file" accept="image/*,video/*" id="cameraModalGalleryInput" style="display: none;" />
             </label>
           </div>
         </div>
+      </div>
+
+      <!-- KAMERA MODUS WECHSLER (FOTO / VIDEO) -->
+      <div class="camera-mode-switcher" id="cameraModeSwitcher">
+        <button type="button" class="camera-mode-tab active" id="btnCameraModePhoto" onclick="CameraModule.switchMode('photo')">📸 FOTO</button>
+        <button type="button" class="camera-mode-tab" id="btnCameraModeVideo" onclick="CameraModule.switchMode('video')">🎥 VIDEO</button>
       </div>
 
       <!-- KAMERA STEUERUNG (LIVE) -->
@@ -974,8 +991,8 @@
           <span style="font-size: 10px; font-weight: 800;">Galerie</span>
         </button>
 
-        <button class="camera-shutter-btn" id="btnCameraShutter" title="Foto schießen">
-          <div class="shutter-inner-ring"></div>
+        <button class="camera-shutter-btn" id="btnCameraShutter" title="Auslöser">
+          <div class="shutter-inner-ring" id="cameraShutterInner"></div>
         </button>
 
         <button class="camera-side-action-btn" id="btnCameraSwitchFacing" title="Kamera wechseln (Front/Back)">
@@ -984,7 +1001,7 @@
         </button>
       </div>
 
-      <!-- KAMERA BESTÄTIGUNG (NACH DEM FOTO) -->
+      <!-- KAMERA BESTÄTIGUNG (NACH DEM FOTO / VIDEO) -->
       <div class="camera-bottom-bar hidden" id="cameraConfirmControls" style="display: flex; gap: 12px; justify-content: center; padding: 18px 24px;">
         <button class="btn-primary" id="btnCameraRetake" style="flex: 1; background: #334155; border: 2px solid #64748b; font-size: 14px; font-weight: 800;">
           🔄 Neu

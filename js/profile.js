@@ -614,21 +614,7 @@ const ProfileModule = {
     const state = window.store ? window.store.state : null;
     if (!state) return;
 
-    // A) Wenn Admin (Code 1008), dann Grossek als User sicherstellen
-    if (this.isAdminUser()) {
-      let grossek = state.players ? state.players.find(p => p.name.toLowerCase() === "grossek") : null;
-      if (!grossek && window.store) {
-        grossek = window.store.addPlayer("grossek", "Haus 1", "assets/mascot_fox.jpg");
-      }
-      if (grossek) {
-        state.currentUser = grossek;
-        localStorage.setItem("walibi_active_user_id", grossek.id);
-        localStorage.setItem("walibi_current_user_id", grossek.id);
-      }
-      return;
-    }
-
-    // B) Wenn regulärer Spieler (Code 6969)
+    // 1. Zuerst prüfen, ob bereits ein aktiver Spieler im LocalStorage oder State existiert!
     const savedUserId = localStorage.getItem("walibi_active_user_id") || localStorage.getItem("walibi_current_user_id");
     if (savedUserId && state.players && state.players.length > 0) {
       const found = state.players.find(p => p.id === savedUserId);
@@ -644,7 +630,21 @@ const ProfileModule = {
       return;
     }
 
-    // Falls noch kein Spieler aktiv ist:
+    // 2. Nur wenn noch KEIN Spieler gewählt wurde und Admin-Code 1008 vorliegt: Grossek als Standard
+    if (this.isAdminUser()) {
+      let grossek = state.players ? state.players.find(p => p.name.toLowerCase() === "grossek") : null;
+      if (!grossek && window.store) {
+        grossek = window.store.addPlayer("grossek", "Haus 1", "assets/mascot_fox.jpg");
+      }
+      if (grossek) {
+        state.currentUser = grossek;
+        localStorage.setItem("walibi_active_user_id", grossek.id);
+        localStorage.setItem("walibi_current_user_id", grossek.id);
+      }
+      return;
+    }
+
+    // 3. Wenn noch kein Spieler gewählt ist:
     if (state.players && state.players.length > 0) {
       this.openProfileSelectModal();
     } else {
@@ -1032,10 +1032,9 @@ const ProfileModule = {
   // --- 3. ONBOARDING SPIELER-AUSWAHL (NUR BEIM ERSTEN START) ---
   openProfileSelectModal(force = false) {
     const allPlayers = (window.store && window.store.state && window.store.state.players) || [];
-    const regularPlayers = allPlayers.filter(p => p.name.toLowerCase() !== "grossek");
 
-    // Falls noch überhaupt keine Mitspieler existieren, direkt in das Erstellungsformular leiten
-    if (regularPlayers.length === 0) {
+    // Falls noch überhaupt keine Spieler existieren, direkt in das Erstellungsformular leiten
+    if (allPlayers.length === 0) {
       this.openCreatePlayerModal();
       return;
     }
@@ -1090,27 +1089,27 @@ const ProfileModule = {
     if (!listContainer) return;
 
     const allPlayers = (window.store && window.store.state && window.store.state.players) || [];
-    const players = allPlayers.filter(p => p.name.toLowerCase() !== "grossek");
     const currentUser = window.store ? window.store.state.currentUser : null;
 
-    if (players.length === 0) {
+    if (allPlayers.length === 0) {
       if (existingSection) existingSection.classList.add("hidden");
       listContainer.innerHTML = "";
       return;
     }
 
     if (existingSection) existingSection.classList.remove("hidden");
-    listContainer.innerHTML = players.map(p => {
+    listContainer.innerHTML = allPlayers.map(p => {
       const isMe = currentUser && currentUser.id === p.id;
+      const isGrossek = p.name && p.name.toLowerCase() === "grossek";
       return `
         <div class="player-select-card" style="${isMe ? 'border-color: var(--walibi-yellow); background: rgba(255,204,0,0.18);' : ''}">
           <img src="${p.avatar || this.generateDefaultAvatar(p.name)}" class="avatar-img" />
           <div class="player-info">
-            <div class="player-name">${p.name} ${isMe ? '⭐ (Du)' : ''}</div>
+            <div class="player-name">${p.name} ${isGrossek ? '👑' : ''} ${isMe ? '⭐ (Du)' : ''}</div>
             <div class="player-house-badge">${p.house || 'Haus 1'} • ${p.points || 0} Pkt</div>
           </div>
           <button class="btn-select-player" onclick="ProfileModule.selectPlayer('${p.id}')">
-            ${isMe ? 'Aktiv' : 'Wählen 👉'}
+            ${isMe ? 'Aktiv ✅' : 'Wählen 👉'}
           </button>
         </div>
       `;
@@ -1124,14 +1123,17 @@ const ProfileModule = {
     if (window.GameAudio) window.GameAudio.playClick();
     window.store.setCurrentUser(player);
     localStorage.setItem("walibi_active_user_id", player.id);
+    localStorage.setItem("walibi_current_user_id", player.id);
 
     const modal = document.getElementById("profileSelectModal");
     if (modal) modal.classList.add("hidden");
+    const myModal = document.getElementById("myProfileModal");
+    if (myModal) myModal.classList.add("hidden");
 
     this.updateHeaderProfile();
     if (window.app) window.app.renderAllViews();
     if (window.app && window.app.showToast) {
-      window.app.showToast(`👋 Willkommen zurück, <strong>${player.name}</strong>!`);
+      window.app.showToast(`👋 Als <strong>${player.name}</strong> aktiv!`);
     }
   },
 
@@ -1309,16 +1311,20 @@ const ProfileModule = {
     const menuAdminBtn = document.getElementById("menuAdminBtn");
     const menuHhBtn = document.getElementById("menuHappyHourBtn");
     const isGrossekAdmin = this.isAdminUser() || (user && user.name && user.name.toLowerCase() === "grossek");
+    const myProfileAdminBtn = document.getElementById("myProfileAdminBtn");
 
-    // KRONE IM HEADER IMMER ANZEIGEN (PIN 1008 GESICHERT)
+    // KRONE IM HEADER NUR FÜR ADMIN (GROSSEK) ANZEIGEN
     if (adminBtn) {
-      adminBtn.style.display = "flex";
+      adminBtn.style.display = isGrossekAdmin ? "flex" : "none";
     }
     if (menuAdminBtn) {
-      menuAdminBtn.style.display = "flex";
+      menuAdminBtn.style.display = isGrossekAdmin ? "flex" : "none";
     }
     if (menuHhBtn) {
-      menuHhBtn.style.display = "flex";
+      menuHhBtn.style.display = isGrossekAdmin ? "flex" : "none";
+    }
+    if (myProfileAdminBtn) {
+      myProfileAdminBtn.style.display = isGrossekAdmin ? "block" : "none";
     }
 
     // Gast-Aufforderungs-Banner steuern

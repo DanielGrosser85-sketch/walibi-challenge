@@ -1,19 +1,23 @@
 /**
- * Walibi Live In-App Kamera & Foto-Manager
- * Unterstützt Echtzeit-Sucher (WebRTC getUserMedia), Front-/Rückkamera-Switch,
- * 3-Sekunden-Selbstauslöser, Blitz-Animation und native Datei-/Galerie-Fallbacks.
+ * Walibi Live In-App Kamera & Foto-/Video-Manager
+ * Unterstützt Foto-Aufnahmen & Live-Videoaufzeichnung (MediaRecorder),
+ * Front-/Rückkamera-Switch, 3-Sekunden-Selbstauslöser, Blitz-Animation
+ * sowie native Datei- & Galerie-Fallbacks.
  */
 const CameraModule = {
   activeStream: null,
   currentFacingMode: "environment", // "environment" | "user"
+  mode: "photo", // "photo" | "video"
+  isRecording: false,
+  mediaRecorder: null,
+  recordedChunks: [],
+  recTimerInterval: null,
+  recSeconds: 0,
+  MAX_REC_SECONDS: 30,
   capturedPhotoBase64: null,
   capturedVideoBase64: null,
   onCaptureCallback: null,
   timerCountdown: 0,
-  timerInterval: null,
-  isVideoMode: false,
-  mediaRecorder: null,
-  recordedChunks: [],
 
   init() {
     this.setupModalElements();
@@ -29,6 +33,7 @@ const CameraModule = {
     const galleryBtn = document.getElementById("btnCameraPickGallery");
     const galleryInput = document.getElementById("cameraModalGalleryInput");
     const fallbackCamInput = document.getElementById("cameraModalFallbackCameraInput");
+    const fallbackVidInput = document.getElementById("cameraModalFallbackVideoInput");
 
     if (closeBtn) {
       closeBtn.onclick = () => this.close();
@@ -47,7 +52,7 @@ const CameraModule = {
     }
 
     if (retakeBtn) {
-      retakeBtn.onclick = () => this.retakePhoto();
+      retakeBtn.onclick = () => this.retakeMedia();
     }
 
     if (confirmBtn) {
@@ -65,6 +70,10 @@ const CameraModule = {
     if (fallbackCamInput) {
       fallbackCamInput.onchange = (e) => this.handleFileInput(e);
     }
+
+    if (fallbackVidInput) {
+      fallbackVidInput.onchange = (e) => this.handleFileInput(e);
+    }
   },
 
   open(options = {}) {
@@ -72,18 +81,20 @@ const CameraModule = {
 
     this.onCaptureCallback = options.onCapture || null;
     this.currentFacingMode = options.facingMode || "environment";
-    this.isVideoMode = options.isVideoMode || false;
+    this.mode = options.isVideoMode ? "video" : "photo";
     this.capturedPhotoBase64 = null;
     this.capturedVideoBase64 = null;
     this.timerCountdown = 0;
+    this.isRecording = false;
+    this.recSeconds = 0;
 
     const modal = document.getElementById("inAppCameraModal");
     const titleEl = document.getElementById("cameraModalTitle");
     if (titleEl) {
-      titleEl.textContent = options.title || (this.currentFacingMode === "user" ? "🤳 Selfie-Kamera" : "📸 Walibi Live-Kamera");
+      titleEl.textContent = options.title || (this.mode === "video" ? "🎥 Walibi Live-Video" : (this.currentFacingMode === "user" ? "🤳 Selfie-Kamera" : "📸 Walibi Live-Kamera"));
     }
 
-    // UI-Zustände zurücksetzen
+    this.updateModeTabsUI();
     this.resetCameraUI();
 
     if (modal) {
@@ -96,17 +107,58 @@ const CameraModule = {
     this.startCameraStream();
   },
 
+  switchMode(newMode) {
+    if (this.isRecording) {
+      this.stopRecording();
+    }
+
+    if (this.mode === newMode) return;
+    if (window.GameAudio) window.GameAudio.playClick();
+
+    this.mode = newMode;
+    this.updateModeTabsUI();
+
+    const titleEl = document.getElementById("cameraModalTitle");
+    if (titleEl) {
+      titleEl.textContent = this.mode === "video" ? "🎥 Walibi Live-Video" : (this.currentFacingMode === "user" ? "🤳 Selfie-Kamera" : "📸 Walibi Live-Kamera");
+    }
+
+    this.startCameraStream();
+  },
+
+  updateModeTabsUI() {
+    const tabPhoto = document.getElementById("btnCameraModePhoto");
+    const tabVideo = document.getElementById("btnCameraModeVideo");
+    const shutterBtn = document.getElementById("btnCameraShutter");
+    const timerBtn = document.getElementById("btnCameraTimer");
+
+    if (tabPhoto) tabPhoto.classList.toggle("active", this.mode === "photo");
+    if (tabVideo) tabVideo.classList.toggle("active", this.mode === "video");
+
+    if (shutterBtn) {
+      shutterBtn.classList.toggle("video-mode-shutter", this.mode === "video");
+      shutterBtn.classList.remove("is-recording");
+    }
+
+    if (timerBtn) {
+      timerBtn.style.display = this.mode === "photo" ? "flex" : "none";
+    }
+  },
+
   async startCameraStream() {
     this.stopCameraStream();
 
     const videoEl = document.getElementById("cameraLiveStream");
     const fallbackBox = document.getElementById("cameraFallbackBox");
     const controlsRow = document.getElementById("cameraLiveControls");
+    const modeSwitcher = document.getElementById("cameraModeSwitcher");
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       this.showFallback("Web-Kamera wird von diesem Browser nicht direkt unterstützt.");
       return;
     }
+
+    const wantAudio = this.mode === "video";
 
     try {
       const constraints = {
@@ -115,10 +167,21 @@ const CameraModule = {
           width: { ideal: 1280 },
           height: { ideal: 720 }
         },
-        audio: false
+        audio: wantAudio
       };
 
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (errWithAudio) {
+        if (wantAudio) {
+          constraints.audio = false;
+          stream = await navigator.mediaDevices.getUserMedia(constraints);
+        } else {
+          throw errWithAudio;
+        }
+      }
+
       this.activeStream = stream;
 
       if (videoEl) {
@@ -129,6 +192,7 @@ const CameraModule = {
 
       if (fallbackBox) fallbackBox.classList.add("hidden");
       if (controlsRow) controlsRow.classList.remove("hidden");
+      if (modeSwitcher) modeSwitcher.classList.remove("hidden");
     } catch (err) {
       console.warn("Camera getUserMedia error:", err);
       this.showFallback("Kamerazugriff wurde abgelehnt oder ist blockiert.");
@@ -165,6 +229,15 @@ const CameraModule = {
   },
 
   handleShutterClick() {
+    if (this.mode === "video") {
+      if (!this.isRecording) {
+        this.startRecording();
+      } else {
+        this.stopRecording();
+      }
+      return;
+    }
+
     if (this.timerCountdown > 0) {
       this.startTimerCountdown(() => this.snapPhoto());
     } else {
@@ -203,7 +276,6 @@ const CameraModule = {
       return;
     }
 
-    // Blitz-Effekt & Sound
     if (flashEl) {
       flashEl.classList.remove("hidden");
       flashEl.classList.add("trigger-flash");
@@ -215,7 +287,6 @@ const CameraModule = {
 
     if (window.GameAudio) window.GameAudio.playReward();
 
-    // Canvas Frame zeichnen & komprimieren
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
     const maxDim = 1080;
@@ -237,7 +308,6 @@ const CameraModule = {
     canvas.width = w;
     canvas.height = h;
 
-    // Wenn Front-Kamera (Selfie) gespiegelt zeichnen
     if (this.currentFacingMode === "user") {
       ctx.translate(w, 0);
       ctx.scale(-1, 1);
@@ -247,8 +317,8 @@ const CameraModule = {
 
     const compressedBase64 = canvas.toDataURL("image/jpeg", 0.85);
     this.capturedPhotoBase64 = compressedBase64;
+    this.capturedVideoBase64 = null;
 
-    // Live Stream anhalten & Vorschau einblenden
     this.stopCameraStream();
 
     if (videoEl) videoEl.classList.add("hidden");
@@ -258,6 +328,132 @@ const CameraModule = {
     }
 
     this.showConfirmationControls();
+  },
+
+  // --- 🎥 VIDEO AUFZEICHNUNG (MediaRecorder) ---
+  startRecording() {
+    if (!this.activeStream) return;
+
+    if (typeof MediaRecorder === "undefined") {
+      alert("Video-Aufnahme wird von diesem Browser nicht unterstützt. Bitte lade ein Video über die Galerie hoch.");
+      return;
+    }
+
+    this.recordedChunks = [];
+    let options = {};
+
+    if (MediaRecorder.isTypeSupported("video/webm;codecs=vp8,opus")) {
+      options = { mimeType: "video/webm;codecs=vp8,opus" };
+    } else if (MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")) {
+      options = { mimeType: "video/webm;codecs=vp9,opus" };
+    } else if (MediaRecorder.isTypeSupported("video/webm")) {
+      options = { mimeType: "video/webm" };
+    } else if (MediaRecorder.isTypeSupported("video/mp4")) {
+      options = { mimeType: "video/mp4" };
+    }
+
+    try {
+      this.mediaRecorder = new MediaRecorder(this.activeStream, options);
+    } catch (e) {
+      try {
+        this.mediaRecorder = new MediaRecorder(this.activeStream);
+      } catch (err2) {
+        alert("Video-Aufzeichnung konnte nicht gestartet werden: " + err2.message);
+        return;
+      }
+    }
+
+    this.mediaRecorder.ondataavailable = (event) => {
+      if (event.data && event.data.size > 0) {
+        this.recordedChunks.push(event.data);
+      }
+    };
+
+    this.mediaRecorder.onstop = () => {
+      this.finishVideoRecording();
+    };
+
+    this.mediaRecorder.start(250);
+    this.isRecording = true;
+    this.recSeconds = 0;
+
+    if (window.GameAudio) window.GameAudio.playCoin();
+
+    const shutterBtn = document.getElementById("btnCameraShutter");
+    const recBadge = document.getElementById("cameraRecordingIndicator");
+    const recTime = document.getElementById("cameraRecTime");
+    const modeSwitcher = document.getElementById("cameraModeSwitcher");
+
+    if (shutterBtn) shutterBtn.classList.add("is-recording");
+    if (recBadge) recBadge.classList.remove("hidden");
+    if (recTime) recTime.textContent = "REC 00:00";
+    if (modeSwitcher) modeSwitcher.classList.add("hidden");
+
+    clearInterval(this.recTimerInterval);
+    this.recTimerInterval = setInterval(() => {
+      this.recSeconds++;
+      if (recTime) {
+        const mins = String(Math.floor(this.recSeconds / 60)).padStart(2, "0");
+        const secs = String(this.recSeconds % 60).padStart(2, "0");
+        recTime.textContent = `REC ${mins}:${secs}`;
+      }
+
+      if (this.recSeconds >= this.MAX_REC_SECONDS) {
+        this.stopRecording();
+      }
+    }, 1000);
+  },
+
+  stopRecording() {
+    if (!this.isRecording) return;
+    this.isRecording = false;
+
+    clearInterval(this.recTimerInterval);
+
+    const shutterBtn = document.getElementById("btnCameraShutter");
+    const recBadge = document.getElementById("cameraRecordingIndicator");
+
+    if (shutterBtn) shutterBtn.classList.remove("is-recording");
+    if (recBadge) recBadge.classList.add("hidden");
+
+    if (this.mediaRecorder && this.mediaRecorder.state !== "inactive") {
+      this.mediaRecorder.stop();
+    }
+
+    if (window.GameAudio) window.GameAudio.playReward();
+  },
+
+  finishVideoRecording() {
+    if (this.recordedChunks.length === 0) return;
+
+    const mimeType = (this.mediaRecorder && this.mediaRecorder.mimeType) || "video/webm";
+    const blob = new Blob(this.recordedChunks, { type: mimeType });
+    const reader = new FileReader();
+
+    reader.onloadend = () => {
+      const b64 = reader.result;
+      this.capturedVideoBase64 = b64;
+      this.capturedPhotoBase64 = null;
+
+      this.stopCameraStream();
+
+      const videoEl = document.getElementById("cameraLiveStream");
+      const freezeVideo = document.getElementById("cameraFreezeVideoPreview");
+      const freezeImg = document.getElementById("cameraFreezePreview");
+
+      if (videoEl) videoEl.classList.add("hidden");
+      if (freezeImg) freezeImg.classList.add("hidden");
+
+      if (freezeVideo) {
+        freezeVideo.src = b64;
+        freezeVideo.classList.remove("hidden");
+        freezeVideo.play().catch(() => {});
+      }
+
+      this.showConfirmationControls();
+    };
+
+    reader.readAsDataURL(blob);
   },
 
   handleFileInput(event) {
@@ -273,10 +469,25 @@ const CameraModule = {
         const b64 = e.target.result;
         this.capturedVideoBase64 = b64;
         this.capturedPhotoBase64 = null;
-        if (this.onCaptureCallback) {
-          this.onCaptureCallback(b64, true);
+
+        this.stopCameraStream();
+
+        const videoEl = document.getElementById("cameraLiveStream");
+        const freezeVideo = document.getElementById("cameraFreezeVideoPreview");
+        const freezeImg = document.getElementById("cameraFreezePreview");
+        const fallbackBox = document.getElementById("cameraFallbackBox");
+
+        if (videoEl) videoEl.classList.add("hidden");
+        if (freezeImg) freezeImg.classList.add("hidden");
+        if (fallbackBox) fallbackBox.classList.add("hidden");
+
+        if (freezeVideo) {
+          freezeVideo.src = b64;
+          freezeVideo.classList.remove("hidden");
+          freezeVideo.play().catch(() => {});
         }
-        this.close();
+
+        this.showConfirmationControls();
       };
       reader.readAsDataURL(file);
     } else {
@@ -307,13 +518,16 @@ const CameraModule = {
 
           const compressed = canvas.toDataURL("image/jpeg", 0.85);
           this.capturedPhotoBase64 = compressed;
+          this.capturedVideoBase64 = null;
 
           const previewImg = document.getElementById("cameraFreezePreview");
+          const freezeVideo = document.getElementById("cameraFreezeVideoPreview");
           const videoEl = document.getElementById("cameraLiveStream");
           const fallbackBox = document.getElementById("cameraFallbackBox");
 
           this.stopCameraStream();
           if (videoEl) videoEl.classList.add("hidden");
+          if (freezeVideo) freezeVideo.classList.add("hidden");
           if (fallbackBox) fallbackBox.classList.add("hidden");
 
           if (previewImg) {
@@ -332,14 +546,25 @@ const CameraModule = {
   showConfirmationControls() {
     const liveControls = document.getElementById("cameraLiveControls");
     const confirmControls = document.getElementById("cameraConfirmControls");
+    const modeSwitcher = document.getElementById("cameraModeSwitcher");
+
     if (liveControls) liveControls.classList.add("hidden");
+    if (modeSwitcher) modeSwitcher.classList.add("hidden");
     if (confirmControls) confirmControls.classList.remove("hidden");
   },
 
-  retakePhoto() {
+  retakeMedia() {
     if (window.GameAudio) window.GameAudio.playClick();
     this.capturedPhotoBase64 = null;
     this.capturedVideoBase64 = null;
+
+    const freezeVideo = document.getElementById("cameraFreezeVideoPreview");
+    if (freezeVideo) {
+      freezeVideo.pause();
+      freezeVideo.src = "";
+      freezeVideo.classList.add("hidden");
+    }
+
     this.resetCameraUI();
     this.startCameraStream();
   },
@@ -347,8 +572,11 @@ const CameraModule = {
   confirmCapture() {
     if (window.GameAudio) window.GameAudio.playCoin();
 
-    if (this.onCaptureCallback && (this.capturedPhotoBase64 || this.capturedVideoBase64)) {
-      this.onCaptureCallback(this.capturedPhotoBase64 || this.capturedVideoBase64, !!this.capturedVideoBase64);
+    const isVideo = !!this.capturedVideoBase64;
+    const mediaData = this.capturedVideoBase64 || this.capturedPhotoBase64;
+
+    if (this.onCaptureCallback && mediaData) {
+      this.onCaptureCallback(mediaData, isVideo);
     }
 
     this.close();
@@ -359,9 +587,11 @@ const CameraModule = {
     const fallbackMsg = document.getElementById("cameraFallbackMsg");
     const videoEl = document.getElementById("cameraLiveStream");
     const liveControls = document.getElementById("cameraLiveControls");
+    const modeSwitcher = document.getElementById("cameraModeSwitcher");
 
     if (videoEl) videoEl.classList.add("hidden");
     if (liveControls) liveControls.classList.add("hidden");
+    if (modeSwitcher) modeSwitcher.classList.add("hidden");
     if (fallbackMsg) fallbackMsg.textContent = message || "Kamera nicht verfügbar.";
     if (fallbackBox) fallbackBox.classList.remove("hidden");
   },
@@ -369,26 +599,50 @@ const CameraModule = {
   resetCameraUI() {
     const videoEl = document.getElementById("cameraLiveStream");
     const previewImg = document.getElementById("cameraFreezePreview");
+    const freezeVideo = document.getElementById("cameraFreezeVideoPreview");
     const fallbackBox = document.getElementById("cameraFallbackBox");
     const liveControls = document.getElementById("cameraLiveControls");
     const confirmControls = document.getElementById("cameraConfirmControls");
+    const modeSwitcher = document.getElementById("cameraModeSwitcher");
     const timerOverlay = document.getElementById("cameraTimerOverlay");
     const flashEl = document.getElementById("cameraFlashEffect");
+    const recBadge = document.getElementById("cameraRecordingIndicator");
+    const shutterBtn = document.getElementById("btnCameraShutter");
 
     if (previewImg) {
       previewImg.classList.add("hidden");
       previewImg.src = "";
     }
+    if (freezeVideo) {
+      freezeVideo.pause();
+      freezeVideo.classList.add("hidden");
+      freezeVideo.src = "";
+    }
     if (videoEl) videoEl.classList.remove("hidden");
     if (fallbackBox) fallbackBox.classList.add("hidden");
     if (liveControls) liveControls.classList.remove("hidden");
+    if (modeSwitcher) modeSwitcher.classList.remove("hidden");
     if (confirmControls) confirmControls.classList.add("hidden");
     if (timerOverlay) timerOverlay.classList.add("hidden");
     if (flashEl) flashEl.classList.add("hidden");
+    if (recBadge) recBadge.classList.add("hidden");
+    if (shutterBtn) shutterBtn.classList.remove("is-recording");
+
+    this.updateModeTabsUI();
   },
 
   close() {
+    if (this.isRecording) {
+      this.stopRecording();
+    }
     this.stopCameraStream();
+
+    const freezeVideo = document.getElementById("cameraFreezeVideoPreview");
+    if (freezeVideo) {
+      freezeVideo.pause();
+      freezeVideo.src = "";
+    }
+
     const modal = document.getElementById("inAppCameraModal");
     if (modal) {
       modal.classList.add("hidden");

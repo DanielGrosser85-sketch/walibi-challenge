@@ -287,23 +287,21 @@ class AppStore {
       this.state.sympathyVotes = serverDb.sympathyVotes;
     }
 
-    let savedUserId = localStorage.getItem(this.USER_KEY) || localStorage.getItem("walibi_active_user_id") || (this.state.currentUser ? this.state.currentUser.id : null);
+    const activeUserId = localStorage.getItem(this.USER_KEY) || localStorage.getItem("walibi_active_user_id") || localStorage.getItem("walibi_current_user_id") || (this.state.currentUser ? this.state.currentUser.id : null);
 
-    const isAdmin = (window.ProfileModule && window.ProfileModule.isAdminUser && window.ProfileModule.isAdminUser()) || (localStorage.getItem("walibi_access_code") === "1008");
-
-    if (isAdmin) {
+    if (activeUserId) {
+      const myUpdated = this.state.players.find(p => p.id === activeUserId);
+      if (myUpdated) {
+        this.state.currentUser = { ...myUpdated };
+        this.checkAndAutoUnlockSideQuests(activeUserId);
+      }
+    } else if ((window.ProfileModule && window.ProfileModule.isAdminUser && window.ProfileModule.isAdminUser()) || (localStorage.getItem("walibi_access_code") === "1008")) {
       let grossek = this.state.players.find(p => p.name.toLowerCase() === "grossek");
       if (grossek) {
         this.state.currentUser = { ...grossek };
         localStorage.setItem(this.USER_KEY, grossek.id);
         localStorage.setItem("walibi_active_user_id", grossek.id);
         this.checkAndAutoUnlockSideQuests(grossek.id);
-      }
-    } else if (savedUserId) {
-      const myUpdated = this.state.players.find(p => p.id === savedUserId);
-      if (myUpdated) {
-        this.state.currentUser = { ...myUpdated };
-        this.checkAndAutoUnlockSideQuests(savedUserId);
       }
     } else if (this.state.currentUser) {
       const myUpdated = this.state.players.find(p => p.id === this.state.currentUser.id);
@@ -322,13 +320,16 @@ class AppStore {
     if (!user) {
       this.state.currentUser = null;
       localStorage.removeItem(this.USER_KEY);
+      localStorage.removeItem("walibi_active_user_id");
+      localStorage.removeItem("walibi_current_user_id");
       this.saveLocalState();
       return;
     }
-    this.state.currentUser = user;
+    this.state.currentUser = { ...user };
     localStorage.setItem(this.USER_KEY, user.id);
+    localStorage.setItem("walibi_active_user_id", user.id);
+    localStorage.setItem("walibi_current_user_id", user.id);
     this.saveLocalState();
-    this.updateProfile(user.id, user);
   }
 
   async updateProfile(userId, updates) {

@@ -3208,7 +3208,8 @@ body {
 }
 
 .camera-live-video,
-.camera-freeze-img {
+.camera-freeze-img,
+.camera-freeze-video {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -3332,13 +3333,97 @@ body {
   z-index: 10;
 }
 
+/* LIVE VIDEO RECORDING INDICATOR */
+.camera-rec-badge {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(225, 29, 72, 0.92);
+  border: 2px solid #fff;
+  box-shadow: 0 0 16px rgba(225, 29, 72, 0.8);
+  padding: 6px 14px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 28;
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  font-weight: 900;
+  color: #fff;
+  animation: recBadgePulse 1.5s infinite ease-in-out;
+}
+
+@keyframes recBadgePulse {
+  0% { box-shadow: 0 0 10px rgba(225, 29, 72, 0.6); }
+  50% { box-shadow: 0 0 22px rgba(225, 29, 72, 1); }
+  100% { box-shadow: 0 0 10px rgba(225, 29, 72, 0.6); }
+}
+
+.rec-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ffffff;
+  animation: recDotBlink 0.8s infinite alternate ease-in-out;
+}
+
+@keyframes recDotBlink {
+  0% { opacity: 0.2; transform: scale(0.8); }
+  100% { opacity: 1; transform: scale(1.1); }
+}
+
+.rec-limit {
+  font-size: 11px;
+  opacity: 0.8;
+  color: #ffcc00;
+}
+
+/* KAMERA MODUS WECHSLER (FOTO / VIDEO) */
+.camera-mode-switcher {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(10, 15, 30, 0.95);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  z-index: 20;
+}
+
+.camera-mode-tab {
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #94a3b8);
+  font-family: var(--font-headline, sans-serif);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  padding: 6px 16px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.camera-mode-tab:hover {
+  color: #ffffff;
+}
+
+.camera-mode-tab.active {
+  background: rgba(255, 204, 0, 0.2);
+  color: var(--walibi-yellow, #ffcc00);
+  border: 1.5px solid var(--walibi-yellow, #ffcc00);
+  box-shadow: 0 0 10px rgba(255, 204, 0, 0.4);
+}
+
 /* KAMERA BOTTOM BAR */
 .camera-bottom-bar {
   display: flex;
   justify-content: space-around;
   align-items: center;
-  padding: 20px 20px 32px;
-  background: rgba(10, 15, 30, 0.92);
+  padding: 14px 20px 28px;
+  background: rgba(10, 15, 30, 0.96);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border-top: 2px solid rgba(255, 255, 255, 0.15);
@@ -3377,7 +3462,7 @@ body {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-radius 0.2s ease;
 }
 
 .camera-shutter-btn:active {
@@ -3391,6 +3476,35 @@ body {
   border-radius: 50%;
   background: linear-gradient(135deg, #ff2a5f 0%, #e11d48 50%, #9f1239 100%);
   border: 3px solid #ffffff;
+  transition: all 0.2s ease;
+}
+
+/* VIDEO RECORDING SHUTTER STATES */
+.camera-shutter-btn.video-mode-shutter {
+  border-color: #ef4444;
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
+}
+
+.camera-shutter-btn.video-mode-shutter .shutter-inner-ring {
+  background: #ef4444;
+}
+
+.camera-shutter-btn.is-recording {
+  border-color: #ffffff;
+  box-shadow: 0 0 25px rgba(239, 68, 68, 0.9);
+  animation: shutterRecPulse 1s infinite alternate ease-in-out;
+}
+
+.camera-shutter-btn.is-recording .shutter-inner-ring {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: #ef4444;
+}
+
+@keyframes shutterRecPulse {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.06); }
 }
 
 /* ==========================================================================
