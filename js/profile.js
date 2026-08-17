@@ -183,11 +183,12 @@ const ProfileModule = {
   },
 
   isAdminUser() {
-    const savedCode = localStorage.getItem("walibi_access_code");
-    if (savedCode !== "1008") return false;
     const user = window.store && window.store.state ? window.store.state.currentUser : null;
-    if (!user || !user.name) return false;
-    return user.name.toLowerCase() === "grossek";
+    if (user && user.name) {
+      return user.name.toLowerCase() === "grossek";
+    }
+    const savedCode = localStorage.getItem("walibi_access_code");
+    return savedCode === "1008" || this.isAdmin === true;
   },
 
   activateAdminMode() {
@@ -1152,8 +1153,8 @@ const ProfileModule = {
       this.isAdmin = false;
       localStorage.setItem("walibi_access_code", "6969");
     } else {
-      const code = localStorage.getItem("walibi_access_code");
-      if (code === "1008") this.isAdmin = true;
+      this.isAdmin = true;
+      localStorage.setItem("walibi_access_code", "1008");
     }
 
     window.store.setCurrentUser(player);
@@ -1257,8 +1258,14 @@ const ProfileModule = {
 
         const avatar = this.capturedNewAvatarBase64 || this.generateDefaultAvatar(name);
         const newPlayer = await window.store.addPlayer(name, house, avatar);
+
+        const isGrossek = name.toLowerCase() === "grossek";
+        this.isAdmin = isGrossek;
+        localStorage.setItem("walibi_access_code", isGrossek ? "1008" : "6969");
+
         window.store.setCurrentUser(newPlayer);
         localStorage.setItem("walibi_active_user_id", newPlayer.id);
+        localStorage.setItem("walibi_current_user_id", newPlayer.id);
 
         if (createModal) createModal.classList.add("hidden");
         if (selectModal) selectModal.classList.add("hidden");
