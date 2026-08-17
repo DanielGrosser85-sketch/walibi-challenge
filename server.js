@@ -217,25 +217,28 @@ function saveMediaBase64(base64Str, prefix = 'media') {
   if (!base64Str.startsWith('data:')) return base64Str; // Bereits eine URL
 
   try {
-    const match = base64Str.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9\-\+\.]+);base64,(.+)$/);
-    if (!match) return null;
+    const marker = ';base64,';
+    const markerIndex = base64Str.indexOf(marker);
+    if (markerIndex === -1) return null;
 
-    const mime = match[1].toLowerCase();
-    const dataBuffer = Buffer.from(match[2], 'base64');
+    const mimePart = base64Str.substring(5, markerIndex).toLowerCase();
+    const rawData = base64Str.substring(markerIndex + marker.length);
+    const dataBuffer = Buffer.from(rawData, 'base64');
     let ext = 'jpg';
 
-    if (mime.includes('png')) ext = 'png';
-    else if (mime.includes('gif')) ext = 'gif';
-    else if (mime.includes('webp')) ext = 'webp';
-    else if (mime.includes('svg')) ext = 'svg';
-    else if (mime.includes('mp4')) ext = 'mp4';
-    else if (mime.includes('webm')) ext = 'webm';
-    else if (mime.includes('quicktime') || mime.includes('mov')) ext = 'mov';
-    else if (mime.includes('video')) ext = 'mp4';
+    if (mimePart.includes('png')) ext = 'png';
+    else if (mimePart.includes('gif')) ext = 'gif';
+    else if (mimePart.includes('webp')) ext = 'webp';
+    else if (mimePart.includes('svg')) ext = 'svg';
+    else if (mimePart.includes('mp4') || mimePart.includes('m4v')) ext = 'mp4';
+    else if (mimePart.includes('webm')) ext = 'webm';
+    else if (mimePart.includes('quicktime') || mimePart.includes('mov')) ext = 'mov';
+    else if (mimePart.includes('video')) ext = 'mp4';
 
     const filename = `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 6)}.${ext}`;
     const diskPath = path.join(UPLOADS_DIR, filename);
     fs.writeFileSync(diskPath, dataBuffer);
+    console.log(`[Media] Saved ${ext} (${(dataBuffer.length / 1024).toFixed(1)} KB) -> /uploads/${filename}`);
     return `/uploads/${filename}`;
   } catch (e) {
     console.error("Fehler beim Speichern der Mediendatei:", e);

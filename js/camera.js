@@ -332,33 +332,43 @@ const CameraModule = {
 
   // --- 🎥 VIDEO AUFZEICHNUNG (MediaRecorder) ---
   startRecording() {
-    if (!this.activeStream) return;
+    if (!this.activeStream) {
+      alert("Kamerazugriff wird noch initialisiert...");
+      return;
+    }
 
     if (typeof MediaRecorder === "undefined") {
-      alert("Video-Aufnahme wird von diesem Browser nicht unterstützt. Bitte lade ein Video über die Galerie hoch.");
+      alert("Live-Videoaufnahme wird von diesem Browser leider nicht unterstützt. Bitte nutze die Galerie oder das Video-Fallback.");
       return;
     }
 
     this.recordedChunks = [];
     let options = {};
 
-    if (MediaRecorder.isTypeSupported("video/webm;codecs=vp8,opus")) {
-      options = { mimeType: "video/webm;codecs=vp8,opus" };
-    } else if (MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")) {
-      options = { mimeType: "video/webm;codecs=vp9,opus" };
-    } else if (MediaRecorder.isTypeSupported("video/webm")) {
-      options = { mimeType: "video/webm" };
-    } else if (MediaRecorder.isTypeSupported("video/mp4")) {
-      options = { mimeType: "video/mp4" };
+    const preferredMimes = [
+      "video/mp4;codecs=avc1,mp4a.40.2",
+      "video/mp4",
+      "video/webm;codecs=vp9,opus",
+      "video/webm;codecs=vp8,opus",
+      "video/webm"
+    ];
+
+    if (typeof MediaRecorder.isTypeSupported === "function") {
+      for (const mime of preferredMimes) {
+        if (MediaRecorder.isTypeSupported(mime)) {
+          options = { mimeType: mime };
+          break;
+        }
+      }
     }
 
     try {
       this.mediaRecorder = new MediaRecorder(this.activeStream, options);
-    } catch (e) {
+    } catch (e1) {
       try {
         this.mediaRecorder = new MediaRecorder(this.activeStream);
-      } catch (err2) {
-        alert("Video-Aufzeichnung konnte nicht gestartet werden: " + err2.message);
+      } catch (e2) {
+        alert("Video-Aufnahme konnte nicht gestartet werden: " + e2.message);
         return;
       }
     }
@@ -417,6 +427,11 @@ const CameraModule = {
     if (recBadge) recBadge.classList.add("hidden");
 
     if (this.mediaRecorder && this.mediaRecorder.state !== "inactive") {
+      try {
+        if (typeof this.mediaRecorder.requestData === 'function') {
+          this.mediaRecorder.requestData();
+        }
+      } catch (e) {}
       this.mediaRecorder.stop();
     }
 
@@ -424,9 +439,21 @@ const CameraModule = {
   },
 
   finishVideoRecording() {
-    if (this.recordedChunks.length === 0) return;
+    if (!this.recordedChunks || this.recordedChunks.length === 0) {
+      alert("⚠️ Die Videoaufnahme war zu kurz. Bitte halte die Aufnahme mindestens 1 Sekunde lang.");
+      this.retakeMedia();
+      return;
+    }
 
-    const mimeType = (this.mediaRecorder && this.mediaRecorder.mimeType) || "video/webm";
+    let mimeType = (this.mediaRecorder && this.mediaRecorder.mimeType) || "";
+    if (!mimeType) {
+      if (typeof MediaRecorder.isTypeSupported === "function" && MediaRecorder.isTypeSupported("video/mp4")) {
+        mimeType = "video/mp4";
+      } else {
+        mimeType = "video/webm";
+      }
+    }
+
     const blob = new Blob(this.recordedChunks, { type: mimeType });
     const reader = new FileReader();
 
@@ -447,6 +474,7 @@ const CameraModule = {
       if (freezeVideo) {
         freezeVideo.src = b64;
         freezeVideo.classList.remove("hidden");
+        freezeVideo.load();
         freezeVideo.play().catch(() => {});
       }
 
