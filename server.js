@@ -17,46 +17,41 @@ function getDefaultState() {
   return {
     players: [
       {
-        id: "p1",
-        name: "Alex",
+        id: "p_1786747056481_o5jo",
+        name: "grossek",
         house: "Haus 1",
-        avatar: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%236366f1'/><text x='50' y='60' font-size='40' text-anchor='middle' fill='white' font-family='sans-serif'>A</text></svg>",
+        avatar: "assets/mascot_fox.jpg",
         points: 0,
         drinksCount: 0,
-        completedQuests: []
-      },
-      {
-        id: "p2",
-        name: "Stefan",
-        house: "Haus 2",
-        avatar: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23ec4899'/><text x='50' y='60' font-size='40' text-anchor='middle' fill='white' font-family='sans-serif'>S</text></svg>",
-        points: 0,
-        drinksCount: 0,
-        completedQuests: []
-      },
-      {
-        id: "p3",
-        name: "Felix",
-        house: "Haus 1",
-        avatar: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%2310b981'/><text x='50' y='60' font-size='40' text-anchor='middle' fill='white' font-family='sans-serif'>F</text></svg>",
-        points: 0,
-        drinksCount: 0,
-        completedQuests: []
-      },
-      {
-        id: "p4",
-        name: "Laura",
-        house: "Haus 2",
-        avatar: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23f59e0b'/><text x='50' y='60' font-size='40' text-anchor='middle' fill='white' font-family='sans-serif'>L</text></svg>",
-        points: 0,
-        drinksCount: 0,
-        completedQuests: []
+        completedQuests: [],
+        completedSideQuests: [],
+        rideCounts: {},
+        drinksDetail: { beer: 0, shot: 0, longdrink: 0, joint: 0, water: 0 },
+        gutGlaubenCount: 0,
+        sympathyPoints: 0,
+        sympathyVotesReceived: []
       }
     ],
     houses: ["Haus 1", "Haus 2", "Haus 3"],
     feed: [],
+    happyHour: { active: false, endsAt: null, multiplier: 2 },
+    sympathyVotes: {},
+    gameStatus: { isRunning: true, isEnded: false, startedAt: new Date().toISOString() },
     version: 1
   };
+}
+
+function isHappyHourActive() {
+  if (!db.happyHour || !db.happyHour.active || !db.happyHour.endsAt) return false;
+  if (new Date(db.happyHour.endsAt) <= new Date()) {
+    db.happyHour.active = false;
+    return false;
+  }
+  return true;
+}
+
+function getPointsMultiplier() {
+  return isHappyHourActive() ? 2 : 1;
 }
 
 let db = getDefaultState();
@@ -398,11 +393,13 @@ function handleApiRequest(pathname, req, res) {
 
       const requiresVoting = data.requiresVoting === true;
       const requiresWitnessPending = data.requiresWitnessPending === true;
-      const points = typeof data.points === 'number' ? data.points : 0;
+      let rawPoints = typeof data.points === 'number' ? data.points : 0;
+      const multiplier = getPointsMultiplier();
+      const points = rawPoints > 0 ? (rawPoints * multiplier) : rawPoints;
 
       let initialPoints = 0;
       if (points < 0) {
-        // Malus / Minuspunkte sofort abziehen
+        // Malus / Minuspunkte sofort abziehen (nicht multiplizieren)
         initialPoints = points;
         player.points = Math.max(0, (player.points || 0) + points);
       } else if (!requiresVoting && !requiresWitnessPending) {
@@ -450,10 +447,11 @@ function handleApiRequest(pathname, req, res) {
         questDescription: data.questDescription,
         questIcon: data.questIcon || "🎯",
         points: points,
-        basePoints: data.basePoints || points,
+        basePoints: data.basePoints || rawPoints,
         actualPointsAwarded: initialPoints,
         selectedOutcome: data.selectedOutcome || null,
         isFaithBased: isFaithBased,
+        isHappyHour: multiplier > 1,
         witnesses: data.witnesses || [],
         witnessPending: requiresWitnessPending,
         photo: photoUrl || null,
@@ -550,8 +548,9 @@ function handleApiRequest(pathname, req, res) {
       }
 
       const isVideo = photoUrl && (photoUrl.endsWith('.mp4') || photoUrl.endsWith('.webm') || photoUrl.endsWith('.mov'));
-      // 5 Punkte für einfache Text-Nachricht, 10 Punkte für Bild / Video
-      const points = photoUrl ? 10 : 5;
+      // 5 Punkte für einfache Text-Nachricht, 10 Punkte für Bild / Video (2x bei Happy Hour)
+      const basePoints = photoUrl ? 10 : 5;
+      const points = basePoints * getPointsMultiplier();
       player.points = (player.points || 0) + points;
 
       const feedItem = {
@@ -596,18 +595,17 @@ function handleApiRequest(pathname, req, res) {
         return;
       }
 
-      const points = data.points || 5;
-      player.points += points;
-      player.drinksCount = (player.drinksCount || 0) + 1;
+      const basePoints = typeof data.points === 'number' ? data.points : 5;
+      const points = basePoints * getPointsMultiplier();
+      player.points = Number(player.points || 0) + points;
+      player.drinksCount = Number(player.drinksCount || 0) + 1;
 
       // Detailzählung pro Getränk/Item
       if (!player.drinksDetail) {
         player.drinksDetail = { beer: 0, shot: 0, longdrink: 0, joint: 0, water: 0 };
       }
-      player.drinksDetail[data.itemId] = (player.drinksDetail[data.itemId] || 0) + 1;
+      player.drinksDetail[data.itemId] = Number(player.drinksDetail[data.itemId] || 0) + 1;
 
-      // HINWEIS: Einzelne Drinks werden nicht mehr in den Feed geschoben,
-      // damit der Live-Feed übersichtlich für Quests & Schnappschüsse bleibt!
       saveDb();
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -638,6 +636,9 @@ function handleApiRequest(pathname, req, res) {
       }
 
       const sq = data.achievement;
+      const basePoints = sq.points || 25;
+      const points = basePoints * getPointsMultiplier();
+
       const feedItem = data.feedItem || {
         id: "feed_achieve_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
         type: "achievement",
@@ -649,8 +650,9 @@ function handleApiRequest(pathname, req, res) {
         achievementTitle: sq.title,
         achievementDesc: sq.desc,
         achievementIcon: sq.icon || "🏆",
-        points: sq.points || 25,
-        actualPointsAwarded: sq.points || 25,
+        points: points,
+        basePoints: basePoints,
+        actualPointsAwarded: points,
         timestamp: new Date().toISOString(),
         reactions: { "🔥": [], "🍺": [], "👑": [], "💀": [], "👏": [] },
         comments: []
@@ -750,8 +752,9 @@ function handleApiRequest(pathname, req, res) {
         photoUrl = data.photoBase64;
       }
 
-      // 2 Punkte für Text-Kommentar, 5 Punkte für Foto-Kommentar
-      const commentPoints = photoUrl ? 5 : 2;
+      // 2 Punkte für Text-Kommentar, 5 Punkte für Foto-Kommentar (2x bei Happy Hour)
+      const baseCommentPoints = photoUrl ? 5 : 2;
+      const commentPoints = baseCommentPoints * getPointsMultiplier();
       player.points = (player.points || 0) + commentPoints;
 
       if (!item.comments) item.comments = [];
@@ -775,7 +778,7 @@ function handleApiRequest(pathname, req, res) {
     return;
   }
 
-  // POST /api/reaction (+5 Punkte für den Beitrags-Autor pro Reaktion)
+  // POST /api/reaction (+5 Punkte für den Beitrags-Autor pro Reaktion, 2x bei Happy Hour)
   if (pathname === '/api/reaction' && req.method === 'POST') {
     parseJsonBody(req, (err, data) => {
       if (err || !data.feedId || !data.userId || !data.emoji) {
@@ -797,16 +800,17 @@ function handleApiRequest(pathname, req, res) {
       const userList = item.reactions[data.emoji];
       const idx = userList.indexOf(data.userId);
       const postAuthor = db.players.find(p => p.id === item.userId);
+      const reactionPoints = 5 * getPointsMultiplier();
 
       if (idx >= 0) {
         userList.splice(idx, 1);
         if (postAuthor) {
-          postAuthor.points = Math.max(0, (postAuthor.points || 0) - 5);
+          postAuthor.points = Math.max(0, (postAuthor.points || 0) - reactionPoints);
         }
       } else {
         userList.push(data.userId);
         if (postAuthor) {
-          postAuthor.points = (postAuthor.points || 0) + 5;
+          postAuthor.points = (postAuthor.points || 0) + reactionPoints;
         }
       }
 
@@ -814,6 +818,103 @@ function handleApiRequest(pathname, req, res) {
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ success: true, reactions: item.reactions, postAuthorPoints: postAuthor ? postAuthor.points : 0 }));
+    });
+    return;
+  }
+
+  // POST /api/sympathy/vote (Sympathie- & Eisbrecher-Punkte vergeben)
+  if (pathname === '/api/sympathy/vote' && req.method === 'POST') {
+    parseJsonBody(req, (err, data) => {
+      if (err || !data.voterId || !data.votes || typeof data.votes !== 'object') {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Ungültige Sympathie-Voting-Daten' }));
+        return;
+      }
+
+      let voter = db.players.find(p => p.id === data.voterId || (data.voterName && p.name && p.name.toLowerCase() === String(data.voterName).toLowerCase()));
+      if (!voter) {
+        if (db.players.length > 0) {
+          voter = db.players[0];
+        } else {
+          voter = { id: data.voterId || "player_1", name: data.voterName || "Spieler", points: 0 };
+          db.players.push(voter);
+        }
+      }
+
+      const activeVoterId = voter.id;
+      if (!db.sympathyVotes) db.sympathyVotes = {};
+      db.sympathyVotes[activeVoterId] = data.votes;
+
+      // Neuberechnung der Sympathie-Punkte für alle Spieler
+      db.players.forEach(player => {
+        const received = [];
+        let totalSympathyPts = 0;
+
+        Object.keys(db.sympathyVotes).forEach(vid => {
+          if (vid === player.id) return; // Eigene Stimmen zählen nicht
+          const voterObj = db.players.find(p => p.id === vid);
+          const voterVotes = db.sympathyVotes[vid];
+          if (voterVotes && voterVotes[player.id]) {
+            const voteItem = voterVotes[player.id];
+            const rating = Number(voteItem.rating) || 5;
+            const pts = typeof voteItem.points === 'number' ? voteItem.points : Math.min(50, Math.max(10, rating * 10));
+            totalSympathyPts += pts;
+            received.push({
+              voterId: vid,
+              voterName: voterObj ? voterObj.name : "Mitspieler",
+              voterAvatar: voterObj ? voterObj.avatar : null,
+              rating: rating,
+              points: pts,
+              tag: voteItem.tag || null,
+              comment: voteItem.comment || null
+            });
+          }
+        });
+
+        const oldSympathyPts = Number(player.sympathyPoints) || 0;
+        const diff = totalSympathyPts - oldSympathyPts;
+
+        player.sympathyVotesReceived = received;
+        player.sympathyPoints = totalSympathyPts;
+        player.points = Math.max(0, (Number(player.points) || 0) + diff);
+      });
+
+      saveDb();
+      broadcastSSE({ type: "SYMPATHY_VOTES_UPDATED", sympathyVotes: db.sympathyVotes, state: db });
+
+      console.log(`💖 SYMPATHIE-VOTE erhalten von ${voter.name} für ${Object.keys(data.votes).length} Spieler.`);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, message: 'Sympathie-Punkte erfolgreich verbucht', players: db.players, sympathyVotes: db.sympathyVotes }));
+    });
+    return;
+  }
+
+  // POST /api/admin/happy-hour (Happy Hour für 1 Stunde aktivieren/deaktivieren)
+  if (pathname === '/api/admin/happy-hour' && req.method === 'POST') {
+    parseJsonBody(req, (err, data) => {
+      if (err || data.code !== '1008') {
+        res.writeHead(403, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Admin-Zugang verweigert' }));
+        return;
+      }
+
+      if (data.action === 'stop') {
+        db.happyHour = { active: false, endsAt: null, multiplier: 2 };
+      } else {
+        const durationMinutes = Number(data.durationMinutes) || 60;
+        db.happyHour = {
+          active: true,
+          endsAt: new Date(Date.now() + durationMinutes * 60 * 1000).toISOString(),
+          multiplier: 2
+        };
+      }
+
+      saveDb();
+      broadcastSSE({ type: "HAPPY_HOUR_UPDATE", happyHour: db.happyHour, state: db });
+
+      console.log(`⚡ HAPPY HOUR UPDATE: Active=${db.happyHour.active}, EndsAt=${db.happyHour.endsAt}`);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, happyHour: db.happyHour }));
     });
     return;
   }
@@ -882,7 +983,7 @@ function handleApiRequest(pathname, req, res) {
     return;
   }
 
-  // POST /api/admin/reset-game (Kompletter Reset auf 0)
+  // POST /api/admin/reset-game (Kompletter Reset auf 0 & nur Grossek behalten)
   if (pathname === '/api/admin/reset-game' && req.method === 'POST') {
     parseJsonBody(req, (err, data) => {
       if (err || data.code !== '1008') {
@@ -891,26 +992,115 @@ function handleApiRequest(pathname, req, res) {
         return;
       }
 
-      // Alle Spieler zurücksetzen auf 0 (inkl. Nebenquests & Achterbahn-Zähler)
-      db.players.forEach(p => {
-        p.points = 0;
-        p.drinksCount = 0;
-        p.completedQuests = [];
-        p.completedSideQuests = [];
-        p.rideCounts = {};
-        p.drinksDetail = { beer: 0, shot: 0, longdrink: 0, joint: 0, water: 0 };
-      });
+      // Nur Grossek behalten mit 0 Punkten
+      const grossekExisting = db.players.find(p => p.name.toLowerCase() === 'grossek');
+      db.players = [
+        {
+          id: grossekExisting ? grossekExisting.id : "p_1786747056481_o5jo",
+          name: "grossek",
+          house: "Haus 1",
+          avatar: (grossekExisting && grossekExisting.avatar) || "assets/mascot_fox.jpg",
+          points: 0,
+          drinksCount: 0,
+          completedQuests: [],
+          completedSideQuests: [],
+          rideCounts: {},
+          drinksDetail: { beer: 0, shot: 0, longdrink: 0, joint: 0, water: 0 },
+          gutGlaubenCount: 0,
+          sympathyPoints: 0,
+          sympathyVotesReceived: []
+        }
+      ];
 
-      // Feed komplett leeren & Spiel reaktivieren
+      // Feed komplett leeren, Sympathie-Votes leeren, Happy Hour stoppen & Spiel reaktivieren
       db.feed = [];
-      db.gameStatus = { isRunning: true, startedAt: new Date().toISOString() };
+      db.sympathyVotes = {};
+      db.happyHour = { active: false, endsAt: null, multiplier: 2 };
+      db.gameStatus = { isRunning: true, isEnded: false, startedAt: new Date().toISOString() };
       saveDb();
 
       broadcastSSE({ type: "SYNC_STATE", state: db });
 
-      console.log("🚨 ADMIN RESET DURCHGEFÜHRT: Alle Punkte, Nebenquests, Feed & Statistiken auf 0 gesetzt!");
+      console.log("🚨 ADMIN RESET DURCHGEFÜHRT: Nur Grossek behalten, alle Punkte auf 0, Feed geleert!");
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: true, message: 'Spiel vollständig zurückgesetzt', state: db }));
+      res.end(JSON.stringify({ success: true, message: 'Spiel vollständig zurückgesetzt, nur Grossek aktiv', state: db }));
+    });
+    return;
+  }
+
+  // POST /api/admin/delete-player (Einzelnen Spieler löschen)
+  if (pathname === '/api/admin/delete-player' && req.method === 'POST') {
+    parseJsonBody(req, (err, data) => {
+      if (err || data.code !== '1008' || !data.playerId) {
+        res.writeHead(403, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Admin-Zugang verweigert oder ungültige Daten' }));
+        return;
+      }
+
+      const targetPlayer = db.players.find(p => p.id === data.playerId);
+      if (!targetPlayer) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Spieler nicht gefunden' }));
+        return;
+      }
+
+      if (targetPlayer.name.toLowerCase() === 'grossek') {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Admin grossek kann nicht gelöscht werden' }));
+        return;
+      }
+
+      // Spieler aus db.players entfernen
+      db.players = db.players.filter(p => p.id !== data.playerId);
+
+      // Posts und Kommentare des gelöschten Spielers bereinigen
+      db.feed = db.feed.filter(f => f.userId !== data.playerId);
+      db.feed.forEach(f => {
+        if (f.comments) f.comments = f.comments.filter(c => c.userId !== data.playerId);
+        if (f.reactions) {
+          Object.keys(f.reactions).forEach(k => {
+            f.reactions[k] = f.reactions[k].filter(uId => uId !== data.playerId);
+          });
+        }
+      });
+
+      saveDb();
+      console.log(`🗑️ ADMIN: Spieler "${targetPlayer.name}" (${data.playerId}) gelöscht!`);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, message: `Spieler ${targetPlayer.name} gelöscht`, players: db.players }));
+    });
+    return;
+  }
+
+  // POST /api/admin/delete-all-players (Alle Spieler außer Grossek löschen)
+  if (pathname === '/api/admin/delete-all-players' && req.method === 'POST') {
+    parseJsonBody(req, (err, data) => {
+      if (err || data.code !== '1008') {
+        res.writeHead(403, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Admin-Zugang verweigert' }));
+        return;
+      }
+
+      let grossek = db.players.find(p => p.name.toLowerCase() === 'grossek');
+      if (!grossek) {
+        grossek = getDefaultState().players[0];
+      } else {
+        grossek.points = 0;
+        grossek.drinksCount = 0;
+        grossek.completedQuests = [];
+        grossek.completedSideQuests = [];
+        grossek.rideCounts = {};
+        grossek.drinksDetail = { beer: 0, shot: 0, longdrink: 0, joint: 0, water: 0 };
+        grossek.gutGlaubenCount = 0;
+      }
+
+      db.players = [grossek];
+      db.feed = [];
+      saveDb();
+
+      console.log("🗑️ ADMIN: Alle Spieler außer Grossek gelöscht!");
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, message: 'Alle Spieler außer Grossek wurden gelöscht', players: db.players }));
     });
     return;
   }

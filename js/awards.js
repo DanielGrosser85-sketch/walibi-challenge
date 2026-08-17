@@ -1,4 +1,392 @@
 /**
+ * ❄️🔨 EISBRECHER & SYMPATHIE-VOTING MODULE
+ * Ermöglicht vor der Siegerehrung / dem Zeugnis die Vergabe von Sympathie-Punkten & Ehrentiteln
+ */
+const SympathyModule = {
+  currentVotes: {}, // { [playerId]: { rating: 5, points: 50, tag: "🕶️ Chilligste Socke", comment: "" } }
+  isEditing: false,
+
+  availableTags: [
+    { id: "chill", label: "🕶️ Chilligste Socke" },
+    { id: "buddy", label: "🍻 Bester Trink-Buddy" },
+    { id: "ramp", label: "🚀 Coaster-Rampensau" },
+    { id: "fun", label: "😂 Größter Spaßvogel" },
+    { id: "sun", label: "❤️ Gruppen-Sonnenschein" },
+    { id: "mvp", label: "👑 Heimlicher MVP" }
+  ],
+
+  init() {
+    // Re-render wenn sich Store-Daten ändern und das Modal sichtbar ist
+    if (window.store) {
+      window.store.subscribe(() => {
+        const modal = document.getElementById("sympathyVoteModal");
+        if (modal && !modal.classList.contains("hidden")) {
+          this.renderVoteContent();
+        }
+      });
+    }
+  },
+
+  getCurrentUser() {
+    let u = window.store ? window.store.state.currentUser : null;
+    if (!u) {
+      const savedId = localStorage.getItem("walibi_active_user_id") || localStorage.getItem("walibi_current_user_id");
+      if (savedId && window.store && window.store.state && window.store.state.players) {
+        u = window.store.state.players.find(p => p.id === savedId);
+      }
+    }
+    if (!u && window.ProfileModule && window.ProfileModule.isAdminUser()) {
+      u = window.store && window.store.state && window.store.state.players.find(p => p.name.toLowerCase() === "grossek");
+    }
+    if (!u && window.store && window.store.state && window.store.state.players && window.store.state.players.length > 0) {
+      u = window.store.state.players[0];
+    }
+    if (u && window.store) {
+      window.store.state.currentUser = u;
+    }
+    return u;
+  },
+
+  hasCurrentUserVoted() {
+    const currentUser = this.getCurrentUser();
+    if (!currentUser) return false;
+    const sympathyVotes = (window.store && window.store.state && window.store.state.sympathyVotes) || {};
+    const myVotes = sympathyVotes[currentUser.id];
+    if (myVotes && Object.keys(myVotes).length > 0) return true;
+    try {
+      const localFlag = localStorage.getItem("walibi_sympathy_submitted_" + currentUser.id);
+      if (localFlag === "true") return true;
+    } catch (e) {}
+    return false;
+  },
+
+  openVoteModal(forceEdit = false) {
+    if (window.GameAudio) window.GameAudio.playClick();
+    const modal = document.getElementById("sympathyVoteModal");
+    if (!modal) return;
+
+    if (forceEdit) {
+      this.isEditing = true;
+    } else {
+      // Wenn der Spieler schon abgestimmt hat, zeige den Warte- & Status-Screen
+      this.isEditing = !this.hasCurrentUserVoted();
+    }
+
+    this.renderVoteContent();
+    modal.classList.remove("hidden");
+  },
+
+  closeVoteModal() {
+    if (window.GameAudio) window.GameAudio.playClick();
+    const modal = document.getElementById("sympathyVoteModal");
+    if (modal) modal.classList.add("hidden");
+  },
+
+  renderVoteContent() {
+    const container = document.getElementById("sympathyVoteModalBody");
+    if (!container) return;
+
+    const players = (window.store && window.store.state && window.store.state.players) || [];
+    const currentUser = this.getCurrentUser();
+    const sympathyVotes = (window.store && window.store.state && window.store.state.sympathyVotes) || {};
+    const mySavedVotes = currentUser ? (sympathyVotes[currentUser.id] || {}) : {};
+
+    // Andere Spieler filtern (sich selbst nicht bewerten)
+    const otherPlayers = players.filter(p => !currentUser || p.id !== currentUser.id);
+
+    // Initialisiere currentVotes
+    otherPlayers.forEach(p => {
+      if (!this.currentVotes[p.id]) {
+        if (mySavedVotes[p.id]) {
+          this.currentVotes[p.id] = { ...mySavedVotes[p.id] };
+        } else {
+          this.currentVotes[p.id] = {
+            rating: 5,
+            points: 50,
+            tag: this.availableTags[0].label,
+            comment: ""
+          };
+        }
+      }
+    });
+
+    // 1. FALL: Nur 1 Spieler im Spiel
+    if (otherPlayers.length === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 24px 12px;">
+          <div style="font-size: 48px; margin-bottom: 8px;">👤🎉</div>
+          <h3 style="color: #fff; font-size: 18px; margin-bottom: 6px;">Du bist aktuell der einzige Spieler!</h3>
+          <p style="font-size: 13px; color: var(--text-muted); line-height: 1.4; margin-bottom: 16px;">
+            Sobald weitere Mitstreiter im Park registriert sind, könnt ihr euch hier gegenseitig Sympathie-Punkte und Ehrentitel verpassen!
+          </p>
+          <button type="button" class="btn-primary" onclick="SympathyModule.closeVoteModal(); AwardsModule.openCelebrationModal();" style="background: var(--gradient-gold); color: #000; font-weight: 900; border: 2.5px solid #fff; font-size: 15px;">
+            📜 DIREKT ZUM SAUFTOUR-ZEUGNIS '26
+          </button>
+        </div>
+      `;
+      return;
+    }
+
+    // 2. FALL: Benutzer hat bereits abgestimmt und ist NICHT im Bearbeitungs-Modus -> WARTE- & STATUS-SCREEN
+    const hasVoted = this.hasCurrentUserVoted();
+    if (hasVoted && !this.isEditing) {
+      this.renderWaitingScreen(container, players, currentUser, sympathyVotes);
+      return;
+    }
+
+    // 3. FALL: VOTING-MASKE ZUM ABSTIMMEN / BEARBEITEN
+    this.renderVotingForm(container, otherPlayers);
+  },
+
+  renderWaitingScreen(container, players, currentUser, sympathyVotes) {
+    const totalPlayers = players.length;
+    const votedPlayers = players.filter(p => (sympathyVotes[p.id] && Object.keys(sympathyVotes[p.id]).length > 0) || (localStorage.getItem("walibi_sympathy_submitted_" + p.id) === "true"));
+    const votedCount = votedPlayers.length;
+    const allHaveVoted = votedCount >= totalPlayers;
+    const percentage = Math.round((votedCount / totalPlayers) * 100);
+
+    container.innerHTML = `
+      <!-- HERO WAITING BANNER -->
+      <div style="background: ${allHaveVoted ? 'linear-gradient(135deg, rgba(16,185,129,0.3), rgba(255,204,0,0.25))' : 'linear-gradient(135deg, rgba(236,72,153,0.3), rgba(245,158,11,0.2))'}; border: 2.5px solid ${allHaveVoted ? '#10b981' : '#ec4899'}; border-radius: 14px; padding: 14px; text-align: center; margin-bottom: 14px; box-shadow: 0 0 25px ${allHaveVoted ? 'rgba(16,185,129,0.4)' : 'rgba(236,72,153,0.35)'};">
+        <div style="font-size: 36px; margin-bottom: 2px;">${allHaveVoted ? '🏆👑🎉' : '⏳💖✨'}</div>
+        <h3 style="font-size: 19px; color: #fff; margin: 2px 0 4px 0; font-family: var(--font-headline);">
+          ${allHaveVoted ? 'ALLE HABEN ABGESTIMMT!' : 'WARTE AUF MITSTREITER...'}
+        </h3>
+        <p style="font-size: 13px; color: ${allHaveVoted ? '#a7f3d0' : '#fbcfe8'}; line-height: 1.4; margin: 0;">
+          ${allHaveVoted 
+            ? 'Das offizielle Endergebnis \'26 inklusive aller Sympathie-Punkte steht fest!' 
+            : 'Deine Sympathie-Punkte wurden erfolgreich bestätigt! Wir warten auf die Stimmen der restlichen Gruppe.'}
+        </p>
+      </div>
+
+      <!-- FORTSCHRITTS-LEISTE -->
+      <div style="background: rgba(0,0,0,0.45); border: 1.5px solid rgba(255,255,255,0.15); border-radius: 12px; padding: 12px; margin-bottom: 14px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-size: 12px; font-weight: 800; color: #fff;">Voting-Fortschritt der Gruppe:</span>
+          <span style="font-size: 13px; font-weight: 900; color: #ffcc00;">${votedCount} / ${totalPlayers} (${percentage}%)</span>
+        </div>
+        <div style="width: 100%; height: 12px; background: rgba(255,255,255,0.1); border-radius: 999px; overflow: hidden; border: 1px solid rgba(255,255,255,0.2);">
+          <div style="width: ${percentage}%; height: 100%; background: ${allHaveVoted ? 'var(--gradient-emerald, #10b981)' : 'linear-gradient(90deg, #ec4899, #f59e0b)'}; transition: width 0.4s ease; border-radius: 999px;"></div>
+        </div>
+      </div>
+
+      <!-- STATUS-LISTE ALLER SPIELER -->
+      <div style="background: rgba(15, 23, 42, 0.85); border: 2px solid rgba(255,255,255,0.15); border-radius: 14px; padding: 12px; margin-bottom: 16px;">
+        <div style="font-size: 11px; font-weight: 900; color: var(--walibi-yellow); text-transform: uppercase; margin-bottom: 10px; letter-spacing: 0.5px;">
+          👥 Wer hat schon abgestimmt?
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          ${players.map(p => {
+            const hasP_Voted = Boolean(sympathyVotes[p.id] && Object.keys(sympathyVotes[p.id]).length > 0) || (localStorage.getItem("walibi_sympathy_submitted_" + p.id) === "true");
+            const isCurrent = currentUser && currentUser.id === p.id;
+            return `
+              <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.35); padding: 8px 10px; border-radius: 10px; border: 1.5px solid ${hasP_Voted ? '#10b981' : '#f59e0b'};">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <img src="${p.avatar || 'assets/mascot_fox.jpg'}" style="width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid ${hasP_Voted ? '#10b981' : '#f59e0b'}; object-fit: cover;" />
+                  <div>
+                    <div style="font-size: 13px; font-weight: 900; color: #fff;">
+                      ${p.name} ${isCurrent ? '<span class="you-badge">(Du)</span>' : ''}
+                    </div>
+                    <div style="font-size: 10px; color: var(--text-muted);">${p.house || 'Haus 1'}</div>
+                  </div>
+                </div>
+                <div>
+                  ${hasP_Voted 
+                    ? `<span style="display: inline-flex; align-items: center; gap: 4px; background: rgba(16,185,129,0.2); color: #34d399; font-size: 11px; font-weight: 900; padding: 3px 8px; border-radius: 999px; border: 1px solid #10b981;">
+                        ✅ Abgestimmt
+                       </span>`
+                    : `<span style="display: inline-flex; align-items: center; gap: 4px; background: rgba(245,158,11,0.2); color: #fbbf24; font-size: 11px; font-weight: 900; padding: 3px 8px; border-radius: 999px; border: 1px solid #f59e0b;">
+                        ⏳ Stimmt ab...
+                       </span>`
+                  }
+                </div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      </div>
+
+      <!-- AKTIONEN IM WARTE-SCREEN -->
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <button type="button" class="btn-primary" onclick="SympathyModule.closeVoteModal(); AwardsModule.openCelebrationModal();" style="background: var(--gradient-gold); color: #000; font-weight: 900; border: 2.5px solid #fff; font-size: 15px; padding: 13px; box-shadow: 0 0 20px rgba(255,204,0,0.4);">
+          ${allHaveVoted ? '👑 ZUM FINALEN ZEUGNIS & SIEGEREHRUNG 🏆' : '📜 VORLÄUFIGES ZEUGNIS ANSEHEN'}
+        </button>
+
+        <button type="button" onclick="SympathyModule.openVoteModal(true);" style="background: rgba(236,72,153,0.15); border: 1.5px solid #ec4899; color: #f472b6; font-size: 13px; font-weight: 800; border-radius: 10px; padding: 9px; cursor: pointer; text-align: center;">
+          🔄 Meine Sympathie-Punkte bearbeiten
+        </button>
+      </div>
+    `;
+  },
+
+  renderVotingForm(container, otherPlayers) {
+    container.innerHTML = `
+      <!-- HERO BANNER -->
+      <div style="background: linear-gradient(135deg, rgba(236,72,153,0.25), rgba(255,204,0,0.2)); border: 2px solid #ec4899; border-radius: 14px; padding: 12px; text-align: center; margin-bottom: 14px; box-shadow: 0 0 20px rgba(236,72,153,0.3);">
+        <div style="font-size: 28px; margin-bottom: 2px;">❄️🔨 ➜ 💖✨</div>
+        <h3 style="font-size: 17px; color: #fff; margin: 2px 0 4px 0; font-family: var(--font-headline);">DAS GROSSE EISBRECHER-VOTING</h3>
+        <p style="font-size: 12px; color: #fbcfe8; line-height: 1.4; margin: 0;">
+          Da viele sich vor heute kaum kannten: <strong>Wie cool fandest du deine Mitstreiter?</strong><br>
+          Vergib 1–5 Sterne (+10 bis +50 Punkte) & einen Ehrentitel – jede Stimme fließt ins Zeugnis ein und kann das Klassement noch kippen!
+        </p>
+      </div>
+
+      <!-- LISTE DER MITSPIELER -->
+      <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;">
+        ${otherPlayers.map(p => {
+          const vote = this.currentVotes[p.id] || { rating: 5, points: 50, tag: this.availableTags[0].label, comment: "" };
+          return `
+            <div class="sympathy-player-card" style="background: rgba(15, 23, 42, 0.85); border: 2px solid rgba(236,72,153,0.4); border-radius: 14px; padding: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+              <!-- SPIELER KOPF -->
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <img src="${p.avatar || 'assets/mascot_fox.jpg'}" style="width: 44px; height: 44px; border-radius: 50%; border: 2px solid #ec4899; object-fit: cover;" />
+                  <div>
+                    <div style="font-size: 16px; font-weight: 900; color: #fff;">${p.name}</div>
+                    <div style="font-size: 11px; color: var(--text-muted);">${p.house || 'Haus 1'} • Aktuell: <strong style="color: var(--walibi-yellow);">${p.points || 0} Pkt</strong></div>
+                  </div>
+                </div>
+                <div style="text-align: right;">
+                  <span id="sympathyPtsBadge_${p.id}" class="points-badge" style="font-size: 12px; background: linear-gradient(135deg, #ec4899, #be185d); color: #fff; border-color: #fbcfe8;">
+                    +${vote.points} Pkt
+                  </span>
+                </div>
+              </div>
+
+              <!-- STERNE BEWERTUNG -->
+              <div style="margin-bottom: 10px; background: rgba(0,0,0,0.35); padding: 8px 10px; border-radius: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <span style="font-size: 11px; font-weight: 800; color: #f472b6; text-transform: uppercase;">⭐ Coolness & Sympathie:</span>
+                  <span id="sympathyRatingLabel_${p.id}" style="font-size: 12px; font-weight: 900; color: #ffcc00;">
+                    ${vote.rating === 5 ? '⭐⭐⭐⭐⭐ 5/5 (Mega Kult!)' : vote.rating === 4 ? '⭐⭐⭐⭐ 4/5 (Sehr cool)' : vote.rating === 3 ? '⭐⭐⭐ 3/5 (Guter Typ)' : vote.rating === 2 ? '⭐⭐ 2/5 (Ganz nett)' : '⭐ 1/5 (Solide)'}
+                  </span>
+                </div>
+                <div style="display: flex; gap: 6px; justify-content: space-between;">
+                  ${[1, 2, 3, 4, 5].map(starNum => {
+                    const isSelected = vote.rating >= starNum;
+                    return `
+                      <button type="button" onclick="SympathyModule.setRating('${p.id}', ${starNum})" class="sympathy-star-btn ${isSelected ? 'active' : ''}" style="flex: 1; padding: 6px 2px; border-radius: 8px; border: 1.5px solid ${isSelected ? '#ffcc00' : 'rgba(255,255,255,0.15)'}; background: ${isSelected ? 'rgba(255,204,0,0.2)' : 'rgba(0,0,0,0.4)'}; color: ${isSelected ? '#ffcc00' : '#64748b'}; font-size: 16px; cursor: pointer; transition: all 0.2s;">
+                        ★
+                        <div style="font-size: 9px; font-weight: 800; color: ${isSelected ? '#fff' : '#64748b'};">+${starNum * 10}P</div>
+                      </button>
+                    `;
+                  }).join("")}
+                </div>
+              </div>
+
+              <!-- EISBRECHER TITEL / TAGS -->
+              <div style="margin-bottom: 6px;">
+                <div style="font-size: 11px; font-weight: 800; color: #fbcfe8; text-transform: uppercase; margin-bottom: 6px;">🏷️ Wähle einen Eisbrecher-Ehrentitel:</div>
+                <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+                  ${this.availableTags.map(tagObj => {
+                    const isTagActive = vote.tag === tagObj.label;
+                    return `
+                      <button type="button" onclick="SympathyModule.setTag('${p.id}', '${tagObj.label}')" class="sympathy-tag-btn ${isTagActive ? 'active' : ''}" style="padding: 4px 9px; font-size: 11px; font-weight: 800; border-radius: 999px; border: 1.5px solid ${isTagActive ? '#ec4899' : 'rgba(255,255,255,0.15)'}; background: ${isTagActive ? 'linear-gradient(135deg, #ec4899, #db2777)' : 'rgba(0,0,0,0.4)'}; color: #fff; cursor: pointer; transition: all 0.2s;">
+                        ${tagObj.label}
+                      </button>
+                    `;
+                  }).join("")}
+                </div>
+              </div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+
+      <!-- AKTIONEN -->
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <button type="button" class="btn-primary" onclick="SympathyModule.submitVotes()" style="background: linear-gradient(135deg, #ec4899, #f59e0b); color: #fff; font-weight: 900; border: 2.5px solid #fff; font-size: 16px; padding: 14px; box-shadow: 0 0 25px rgba(236,72,153,0.5); cursor: pointer; width: 100%;">
+          💖 STIMMEN EINREICHEN & BESTÄTIGEN 🚀
+        </button>
+
+        <button type="button" onclick="SympathyModule.openVoteModal(false);" style="background: none; border: none; color: var(--text-muted); font-size: 12px; cursor: pointer; text-decoration: underline; padding: 6px; text-align: center;">
+          ${this.hasCurrentUserVoted() ? '↩️ Zurück zum Warte-Screen' : '📜 Zeugnis direkt ansehen (später abstimmen)'}
+        </button>
+      </div>
+    `;
+  },
+
+  setRating(playerId, rating) {
+    if (window.GameAudio) window.GameAudio.playClick();
+    if (!this.currentVotes[playerId]) {
+      this.currentVotes[playerId] = { rating: 5, points: 50, tag: this.availableTags[0].label, comment: "" };
+    }
+    this.currentVotes[playerId].rating = rating;
+    this.currentVotes[playerId].points = rating * 10;
+    this.renderVoteContent();
+  },
+
+  setTag(playerId, tagLabel) {
+    if (window.GameAudio) window.GameAudio.playClick();
+    if (!this.currentVotes[playerId]) {
+      this.currentVotes[playerId] = { rating: 5, points: 50, tag: tagLabel, comment: "" };
+    }
+    this.currentVotes[playerId].tag = tagLabel;
+    this.renderVoteContent();
+  },
+
+  async submitVotes() {
+    try {
+      const currentUser = this.getCurrentUser();
+      if (!currentUser) {
+        if (window.app && window.app.showToast) {
+          window.app.showToast("⚠️ Bitte wähle zuerst dein Spielerprofil oben aus!");
+        }
+        if (window.ProfileModule) window.ProfileModule.openProfileSelectModal();
+        return;
+      }
+
+      // Votes zusammenstellen
+      const players = (window.store && window.store.state && window.store.state.players) || [];
+      const otherPlayers = players.filter(p => p.id !== currentUser.id);
+
+      const votesToSave = {};
+      otherPlayers.forEach(p => {
+        const cur = this.currentVotes[p.id];
+        const rating = cur && cur.rating ? Number(cur.rating) : 5;
+        const pts = cur && typeof cur.points === 'number' ? cur.points : rating * 10;
+        const tag = cur && cur.tag ? cur.tag : this.availableTags[0].label;
+        const comment = cur && cur.comment ? cur.comment : "";
+        votesToSave[p.id] = { rating, points: pts, tag, comment };
+      });
+      this.currentVotes = votesToSave;
+
+      // Status sofort auf "Abgestimmt" setzen
+      this.isEditing = false;
+      try {
+        localStorage.setItem("walibi_sympathy_submitted_" + currentUser.id, "true");
+      } catch (e) {}
+
+      if (window.GameAudio) window.GameAudio.playReward();
+
+      if (window.app && window.app.showToast) {
+        window.app.showToast("💖 <strong>Sympathie-Punkte erfolgreich bestätigt!</strong>");
+      }
+      if (window.app && window.app.fireConfetti) {
+        window.app.fireConfetti();
+      }
+
+      // Sofort Warte-Screen anzeigen
+      this.renderVoteContent();
+
+      // Speichern im Store
+      if (window.store) {
+        await window.store.submitSympathyVotes(currentUser.id, votesToSave);
+      }
+
+      // Nach Abschluss nochmals Warte-Screen aktualisieren
+      this.renderVoteContent();
+    } catch (err) {
+      console.error("Fehler beim Bestätigen der Sympathie-Stimmen:", err);
+      this.isEditing = false;
+      this.renderVoteContent();
+    }
+  }
+};
+
+window.SympathyModule = SympathyModule;
+
+/**
  * SIEGEREHRUNG & SAUFTOUR-ZEUGNIS '26
  * Spielende und Siegerehrung werden manuell vom Admin im Admin-Panel ausgelöst
  */
@@ -113,6 +501,23 @@ const AwardsModule = {
     const stomachReport = this.generateStomachReport(myRidesCount, myTotalDrinks, myCompletedSideQuests);
     const faithReport = this.generateFaithReport(me.gutGlaubenCount || 0);
 
+    // Sympathie-Punkte & Eisbrecher-Auswertung für den gewählten Spieler
+    const sympathyPts = me.sympathyPoints || 0;
+    const sympathyVotes = me.sympathyVotesReceived || [];
+    const sympathyVotersCount = sympathyVotes.length;
+    const avgSympathyRating = sympathyVotersCount > 0 
+      ? (sympathyVotes.reduce((sum, v) => sum + (v.rating || 5), 0) / sympathyVotersCount).toFixed(1)
+      : "5.0";
+
+    const tagCounts = {};
+    sympathyVotes.forEach(v => {
+      if (v.tag) {
+        tagCounts[v.tag] = (tagCounts[v.tag] || 0) + 1;
+      }
+    });
+
+    const sympathyReport = this.generateSympathyReport(avgSympathyRating, sympathyPts, sympathyVotersCount, tagCounts, me);
+
     // Gruppen-Gesamtstatistik
     let totalGroupBeer = 0, totalGroupShots = 0, totalGroupLongdrinks = 0, totalGroupJoints = 0, totalGroupSideQuests = 0;
     players.forEach(p => {
@@ -177,6 +582,51 @@ const AwardsModule = {
           <div style="font-size: 10px; color: var(--text-muted); font-weight: 900; text-transform: uppercase; letter-spacing: 1px;">Offiziell verliehener Haupt-Titel:</div>
           <div style="font-size: 17px; font-weight: 900; color: #ffcc00; margin-top: 3px; font-family: var(--font-headline);">${titleObj.badge} ${titleObj.title}</div>
           <div style="font-size: 11px; color: #e2e8f0; margin-top: 4px; font-style: italic;">"${titleObj.reason}"</div>
+        </div>
+
+        <!-- 💖 SYMPATHIE- & EISBRECHER-ZEUGNIS -->
+        <div style="background: linear-gradient(135deg, rgba(236, 72, 153, 0.25), rgba(0, 0, 0, 0.55)); border: 2px solid #ec4899; border-radius: 12px; padding: 12px; margin-bottom: 12px; box-shadow: 0 0 20px rgba(236,72,153,0.3);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-size: 11px; font-weight: 900; color: #f472b6; text-transform: uppercase; letter-spacing: 0.5px;">
+              💖 Sympathie- & Eisbrecher-Score:
+            </span>
+            <span class="points-badge" style="font-size: 11px; background: linear-gradient(135deg, #ec4899, #be185d); color: #fff; border-color: #fbcfe8;">
+              +${sympathyPts} Sympathie-Pkt
+            </span>
+          </div>
+
+          <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.4); padding: 8px 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid rgba(236,72,153,0.3);">
+            <div>
+              <div style="font-size: 10px; color: var(--text-muted); font-weight: 800; text-transform: uppercase;">Gruppen-Coolness</div>
+              <div style="font-size: 16px; font-weight: 900; color: #ffcc00; display: flex; align-items: center; gap: 4px;">
+                <span>⭐ ${avgSympathyRating} / 5.0</span>
+                <span style="font-size: 11px; color: #f472b6; font-weight: 700;">(${sympathyVotersCount} ${sympathyVotersCount === 1 ? 'Stimme' : 'Stimmen'})</span>
+              </div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 10px; color: var(--text-muted); font-weight: 800; text-transform: uppercase;">Bonus-Boost</div>
+              <div style="font-size: 14px; font-weight: 900; color: #34d399;">+${sympathyPts} Pkt</div>
+            </div>
+          </div>
+
+          <!-- ERHALTENE EISBRECHER-ORDEN -->
+          ${Object.keys(tagCounts).length > 0 ? `
+            <div style="margin-bottom: 8px;">
+              <div style="font-size: 10px; color: #fbcfe8; font-weight: 800; text-transform: uppercase; margin-bottom: 4px;">Verliehene Gruppen-Titel:</div>
+              <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                ${Object.entries(tagCounts).map(([tag, count]) => `
+                  <span style="background: rgba(236,72,153,0.25); border: 1px solid #f472b6; color: #fff; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px;">
+                    ${tag} ${count > 1 ? `<strong style="color: #ffcc00;">(${count}x)</strong>` : ''}
+                  </span>
+                `).join("")}
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- GUTACHTEN TEXT -->
+          <div style="font-size: 12px; color: #fff; line-height: 1.4; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 8px;">
+            ${sympathyReport}
+          </div>
         </div>
 
         <!-- 🎯 GEMEISTERTE HAUPT-CHALLENGES -->
@@ -302,9 +752,15 @@ const AwardsModule = {
         </div>
       </div>
 
-      <button type="button" class="btn-primary" onclick="AwardsModule.closeCelebrationModal(); window.app.switchTab('leaderboard');" style="background: var(--gradient-gold); color: #000; font-weight: 900; border: 2.5px solid #fff;">
-        🏆 GESAMTE RANGLISTE ANSEHEN
-      </button>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <button type="button" class="btn-primary" onclick="AwardsModule.closeCelebrationModal(); SympathyModule.openVoteModal();" style="background: linear-gradient(135deg, #ec4899, #f59e0b); color: #fff; font-weight: 900; border: 2px solid #fff; font-size: 14px; box-shadow: 0 0 16px rgba(236,72,153,0.4);">
+          💖 SYMPATHIE-PUNKTE VERGEBEN / ANPASSEN
+        </button>
+
+        <button type="button" class="btn-primary" onclick="AwardsModule.closeCelebrationModal(); window.app.switchTab('leaderboard');" style="background: var(--gradient-gold); color: #000; font-weight: 900; border: 2.5px solid #fff; font-size: 14px;">
+          🏆 GESAMTE RANGLISTE ANSEHEN
+        </button>
+      </div>
     `;
   },
 
@@ -639,6 +1095,31 @@ const AwardsModule = {
       return `🕵️‍♂️ <strong>Hochstapler im Anmarsch!</strong> "Vertrau mir Bruder" war deine Lieblingsstrategie (${count}x genutzt). Das Schiedsgericht schüttelt ungläubig den Kopf!`;
     }
     return `🚨 <strong>MÜNCHHAUSEN-DIPLOM '26!</strong> Du hättest auch behauptet, du wärst Untamed rückwärts im Schlaf geflogen (${count}x Gut Glauben eingereicht). Größter Märchenerzähler des Freizeitparks!`;
+  },
+
+  generateSympathyReport(avgRating, points, count, tagCounts, player) {
+    const numRating = parseFloat(avgRating) || 5.0;
+    const tagsList = Object.keys(tagCounts);
+
+    if (count === 0) {
+      return "❤️ <strong>Frisch im Rennen!</strong> Noch keine Sympathie-Stimmen verbucht – klicke unten auf 'Sympathie-Punkte vergeben', um Mitstreiter zu bewerten und Punkte ins Rollen zu bringen!";
+    }
+
+    let topTagText = "";
+    if (tagsList.length > 0) {
+      topTagText = ` Die Gruppe hat dich vor allem als <em>${tagsList.slice(0, 2).join(" & ")}</em> gefeiert!`;
+    }
+
+    if (numRating >= 4.8) {
+      return `👑 <strong>ABSOLUTER PUBLIKUMS-LIEBLING!</strong> Mit spektakulären ${points} Sympathie-Punkten (Ø ${numRating} ⭐) bist du der unangefochtene Sympathieträger der Tour.${topTagText} Alle wollten mit dir im Looping sitzen und anstoßen!`;
+    }
+    if (numRating >= 4.0) {
+      return `🔥 <strong>MEGA COOLE SOCKE!</strong> Starke ${points} Sympathie-Punkte (Ø ${numRating} ⭐).${topTagText} Das Eis ist komplett geschmolzen – eine absolute Bereicherung für jede künftige Walibi-Sauftour!`;
+    }
+    if (numRating >= 3.0) {
+      return `🍻 <strong>SOLIDER TOUR-KAMERAD!</strong> Tapfere ${points} Sympathie-Punkte verbucht (Ø ${numRating} ⭐).${topTagText} Hat die Gruppe zusammengehalten und für ordentlich Stimmung gesorgt!`;
+    }
+    return `⚡ <strong>DER GEHEIMNISVOLLE WILD-CARD-CHARAKTER!</strong> Mit ${points} Sympathie-Punkten bist du der unberechenbarste Typ der Gruppe. Nächstes Mal noch mehr mitmischen!`;
   }
 };
 

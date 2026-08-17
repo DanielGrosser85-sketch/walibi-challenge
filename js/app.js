@@ -25,6 +25,7 @@ class MainApp {
     if (window.ParkGuideModule) window.ParkGuideModule.init();
     if (window.ParkMapModule) window.ParkMapModule.init();
     if (window.AwardsModule) window.AwardsModule.init();
+    if (window.SympathyModule) window.SympathyModule.init();
     if (window.CameraModule) window.CameraModule.init();
 
     if (window.store) {
@@ -32,6 +33,11 @@ class MainApp {
         this.renderAllViews();
       });
     }
+
+    this.updateHappyHourBanner();
+    setInterval(() => {
+      this.updateHappyHourBanner();
+    }, 1000);
 
     console.log("🎢 Mr. oder Mrs. Walibi Challenge App erfolgreich gestartet!");
   }
@@ -108,6 +114,8 @@ class MainApp {
         window.ParkMapModule.closeModal();
       } else if (modalId === "gameEndedCelebrationModal" && window.AwardsModule) {
         window.AwardsModule.closeCelebrationModal();
+      } else if (modalId === "sympathyVoteModal" && window.SympathyModule) {
+        window.SympathyModule.closeVoteModal();
       } else if (modalId === "accessCodeModal") {
         // Startmaske bleibt geöffnet
         try { history.pushState({ appState: 'active', modalId: "accessCodeModal" }, ""); } catch(err) {}
@@ -264,6 +272,7 @@ class MainApp {
   }
 
   renderAllViews() {
+    this.updateHappyHourBanner();
     if (window.ProfileModule) window.ProfileModule.updateHeaderProfile();
     if (window.FeedModule) {
       window.FeedModule.renderHeaderStats();
@@ -272,6 +281,32 @@ class MainApp {
     if (this.currentTab === "quests" && window.QuestsModule) window.QuestsModule.renderQuests();
     if (this.currentTab === "attractions" && window.ParkGuideModule) window.ParkGuideModule.render();
     if (this.currentTab === "leaderboard" && window.LeaderboardModule) window.LeaderboardModule.renderLeaderboard();
+  }
+
+  updateHappyHourBanner() {
+    const banner = document.getElementById("happyHourLiveBanner");
+    const countdownEl = document.getElementById("happyHourCountdown");
+    if (!banner) return;
+
+    const isHH = window.store && window.store.isHappyHourActive();
+    if (isHH) {
+      banner.classList.remove("hidden");
+      banner.style.display = "flex";
+      const hh = window.store.state.happyHour;
+      const remainingMs = Math.max(0, new Date(hh.endsAt).getTime() - Date.now());
+      const mins = Math.floor(remainingMs / 60000);
+      const secs = Math.floor((remainingMs % 60000) / 1000);
+      if (countdownEl) {
+        countdownEl.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+      }
+    } else {
+      banner.classList.add("hidden");
+      banner.style.display = "none";
+    }
+
+    if (window.ProfileModule && document.getElementById("adminModal") && !document.getElementById("adminModal").classList.contains("hidden")) {
+      window.ProfileModule.updateAdminHappyHourUI();
+    }
   }
 
   setupPhotoViewerModal() {
@@ -432,12 +467,12 @@ class MainApp {
     const modal = document.getElementById("quickMenuModal");
     if (!modal) return;
     
-    // Admin Button im Quick Menu prüfen – NUR für echten Admin grossek
+    // Admin Buttons im Quick Menu prüfen – NUR für Admin
     const adminBtn = document.getElementById("menuAdminBtn");
-    if (adminBtn) {
-      const isGrossek = window.ProfileModule && window.ProfileModule.isAdminUser && window.ProfileModule.isAdminUser();
-      adminBtn.style.display = isGrossek ? "flex" : "none";
-    }
+    const hhBtn = document.getElementById("menuHappyHourBtn");
+    const isGrossek = window.ProfileModule && window.ProfileModule.isAdminUser && window.ProfileModule.isAdminUser();
+    if (adminBtn) adminBtn.style.display = isGrossek ? "flex" : "none";
+    if (hhBtn) hhBtn.style.display = isGrossek ? "flex" : "none";
 
     // Sound Status aktualisieren
     const soundLbl = document.getElementById("menuSoundLabel");

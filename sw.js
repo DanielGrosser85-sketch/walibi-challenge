@@ -1,4 +1,4 @@
-const CACHE_NAME = "walibi-quest-v2026-update2";
+const CACHE_NAME = "walibi-quest-v2026-update12";
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',

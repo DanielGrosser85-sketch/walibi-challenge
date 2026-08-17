@@ -37,8 +37,8 @@ const CounterModule = {
     const summary = document.getElementById("counterUserSummary");
     if (!container) return;
 
-    const items = window.store.state.counterItems || window.COUNTER_ITEMS;
-    const currentUser = window.store.state.currentUser;
+    const items = (window.store && window.store.state && window.store.state.counterItems) || window.COUNTER_ITEMS || [];
+    const currentUser = (window.store && window.store.state) ? window.store.state.currentUser : null;
     const details = (currentUser && currentUser.drinksDetail) || { beer: 0, shot: 0, longdrink: 0, joint: 0, water: 0 };
     const total = (currentUser && currentUser.drinksCount) || 0;
 
@@ -51,7 +51,7 @@ const CounterModule = {
     container.innerHTML = items.map(item => {
       const count = details[item.id] || 0;
       return `
-        <div class="counter-item-card" onclick="CounterModule.logItem('${item.id}')" style="border-left-color: ${item.color};">
+        <div class="counter-item-card" onclick="CounterModule.logItem('${item.id}')" style="border-left-color: ${item.color}; cursor: pointer;">
           <span class="counter-icon">${item.icon}</span>
           <div class="counter-info">
             <div class="counter-name">${item.name}</div>
@@ -59,7 +59,7 @@ const CounterModule = {
           </div>
           <div style="display: flex; align-items: center; gap: 8px;">
             <span class="drink-count-pill">${count}x</span>
-            <button class="btn-counter-add" style="background: ${item.color};">+1</button>
+            <button type="button" class="btn-counter-add" style="background: ${item.color}; pointer-events: none;">+1</button>
           </div>
         </div>
       `;
@@ -79,7 +79,9 @@ const CounterModule = {
       }
     }
 
-    const currentUser = window.store.state.currentUser;
+    const currentUser = window.store && window.store.state ? window.store.state.currentUser : null;
+    if (!currentUser) return;
+
     await window.store.logCounterItem(currentUser.id, itemId);
 
     // Haptisches Feedback
@@ -87,7 +89,7 @@ const CounterModule = {
       navigator.vibrate(50);
     }
 
-    const updatedUser = window.store.state.players.find(p => p.id === currentUser.id);
+    const updatedUser = window.store.state.players.find(p => p.id === currentUser.id) || window.store.state.currentUser;
     const count = (updatedUser && updatedUser.drinksDetail && updatedUser.drinksDetail[itemId]) || 1;
 
     // Zufälligen Trinkspruch oder Meilenstein ermitteln
@@ -96,7 +98,7 @@ const CounterModule = {
       quote = window.getRandomPartyQuote(itemId);
     }
 
-    const item = (window.store.state.counterItems || window.COUNTER_ITEMS).find(i => i.id === itemId);
+    const item = (window.store.state.counterItems || window.COUNTER_ITEMS || []).find(i => i.id === itemId);
     const itemName = item ? item.name.split("/")[0].trim() : "Getränk";
 
     // Meilenstein-Trigger (z. B. 5., 10., 15. Drink)
@@ -112,7 +114,7 @@ const CounterModule = {
       }
     }
 
-    // Ansichten aktualisieren
+    // Ansichten sofort aktualisieren
     this.renderCounterModal();
     if (window.ProfileModule && window.ProfileModule.updateHeaderProfile) {
       window.ProfileModule.updateHeaderProfile();

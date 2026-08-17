@@ -22,54 +22,70 @@ class AppStore {
       currentUser: null,
       players: [
         {
-          id: "p1",
-          name: "Alex",
+          id: "p_1786747056481_o5jo",
+          name: "grossek",
           house: "Haus 1",
-          avatar: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23e11d48'/><text x='50' y='60' font-size='40' text-anchor='middle' fill='white' font-family='sans-serif'>A</text></svg>",
+          avatar: "assets/mascot_fox.jpg",
           points: 0,
           drinksCount: 0,
-          completedQuests: []
-        },
-        {
-          id: "p2",
-          name: "Stefan",
-          house: "Haus 2",
-          avatar: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23ec4899'/><text x='50' y='60' font-size='40' text-anchor='middle' fill='white' font-family='sans-serif'>S</text></svg>",
-          points: 0,
-          drinksCount: 0,
-          completedQuests: []
-        },
-        {
-          id: "p3",
-          name: "Felix",
-          house: "Haus 1",
-          avatar: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%2310b981'/><text x='50' y='60' font-size='40' text-anchor='middle' fill='white' font-family='sans-serif'>F</text></svg>",
-          points: 0,
-          drinksCount: 0,
-          completedQuests: []
-        },
-        {
-          id: "p4",
-          name: "Laura",
-          house: "Haus 2",
-          avatar: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23f59e0b'/><text x='50' y='60' font-size='40' text-anchor='middle' fill='white' font-family='sans-serif'>L</text></svg>",
-          points: 0,
-          drinksCount: 0,
-          completedQuests: []
+          completedQuests: [],
+          completedSideQuests: [],
+          rideCounts: {},
+          drinksDetail: { beer: 0, shot: 0, longdrink: 0, joint: 0, water: 0 },
+          gutGlaubenCount: 0,
+          sympathyPoints: 0,
+          sympathyVotesReceived: []
         }
       ],
       houses: ["Haus 1", "Haus 2", "Haus 3"],
       feed: [],
+      happyHour: { active: false, endsAt: null, multiplier: 2 },
+      sympathyVotes: {},
+      gameStatus: { isRunning: true, isEnded: false, startedAt: new Date().toISOString() },
       rulesAccepted: false,
       quests: window.DEFAULT_QUESTS || [],
       counterItems: window.COUNTER_ITEMS || []
     };
   }
 
+  isHappyHourActive() {
+    const hh = this.state.happyHour;
+    if (!hh || !hh.active || !hh.endsAt) return false;
+    const ends = new Date(hh.endsAt).getTime();
+    if (isNaN(ends) || ends <= Date.now()) {
+      hh.active = false;
+      return false;
+    }
+    return true;
+  }
+
+  getPointsMultiplier() {
+    return this.isHappyHourActive() ? 2 : 1;
+  }
+
+  async setHappyHour(active, durationMinutes = 60) {
+    try {
+      const res = await fetch("/api/admin/happy-hour", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: "1008", action: active ? "start" : "stop", durationMinutes })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        this.state.happyHour = data.happyHour;
+        this.saveLocalState();
+        if (window.app) window.app.renderAllViews();
+        return data.happyHour;
+      }
+    } catch(e) {
+      console.warn("Happy Hour offline update", e);
+    }
+  }
+
   loadLocalState() {
     try {
       const data = localStorage.getItem(this.STORAGE_KEY);
-      const savedUserId = localStorage.getItem(this.USER_KEY);
+      const savedUserId = localStorage.getItem(this.USER_KEY) || localStorage.getItem("walibi_active_user_id");
 
       if (data) {
         const parsed = JSON.parse(data);
@@ -78,6 +94,7 @@ class AppStore {
           parsed.counterItems = window.COUNTER_ITEMS || [];
           if (!Array.isArray(parsed.players)) parsed.players = this.getDefaultState().players;
           if (!Array.isArray(parsed.houses)) parsed.houses = ["Haus 1", "Haus 2", "Haus 3"];
+          if (!parsed.sympathyVotes || typeof parsed.sympathyVotes !== "object") parsed.sympathyVotes = {};
           if (!Array.isArray(parsed.feed)) {
             parsed.feed = [];
           } else {
@@ -85,17 +102,26 @@ class AppStore {
           }
 
           // Aktiven Benutzer über User-Key wiederherstellen
-          if (savedUserId) {
+          if (savedUserId && Array.isArray(parsed.players)) {
             const found = parsed.players.find(p => p.id === savedUserId);
             if (found) {
               parsed.currentUser = found;
-            } else if (parsed.currentUser && parsed.currentUser.id === savedUserId) {
-              // parsed.currentUser beibehalten
             } else {
               parsed.currentUser = null;
+              localStorage.removeItem(this.USER_KEY);
+              localStorage.removeItem("walibi_active_user_id");
             }
-          } else if (parsed.currentUser && parsed.currentUser.id) {
-            localStorage.setItem(this.USER_KEY, parsed.currentUser.id);
+          } else if (parsed.currentUser && Array.isArray(parsed.players)) {
+            const found = parsed.players.find(p => p.id === parsed.currentUser.id);
+            if (found) {
+              parsed.currentUser = found;
+              localStorage.setItem(this.USER_KEY, found.id);
+              localStorage.setItem("walibi_active_user_id", found.id);
+            } else {
+              parsed.currentUser = null;
+              localStorage.removeItem(this.USER_KEY);
+              localStorage.removeItem("walibi_active_user_id");
+            }
           } else {
             parsed.currentUser = null;
           }
@@ -108,10 +134,6 @@ class AppStore {
     }
 
     const defaultState = this.getDefaultState();
-    const savedUserId = localStorage.getItem(this.USER_KEY);
-    if (savedUserId && defaultState.players) {
-      defaultState.currentUser = defaultState.players.find(p => p.id === savedUserId) || null;
-    }
     return defaultState;
   }
 
@@ -159,10 +181,12 @@ class AppStore {
   getStateFingerprint(db) {
     if (!db) return "";
     try {
-      const playersPart = (db.players || []).map(p => `${p.id}:${p.points}:${p.drinksCount}:${(p.completedQuests||[]).length}:${p.gutGlaubenCount||0}:${p.name}:${p.avatar}`).join("|");
+      const playersPart = (db.players || []).map(p => `${p.id}:${p.points}:${p.sympathyPoints || 0}:${p.drinksCount}:${(p.completedQuests||[]).length}:${p.gutGlaubenCount||0}:${p.name}:${p.avatar}`).join("|");
       const feedPart = (db.feed || []).map(f => `${f.id}:${(f.comments||[]).length}:${JSON.stringify(f.votes||{})}:${(f.actualPointsAwarded||0)}:${JSON.stringify(f.reactions||{})}:${JSON.stringify(f.witnesses||[])}`).join("|");
       const gameStatus = db.gameStatus || "running";
-      return `${playersPart}###${feedPart}###${gameStatus}`;
+      const hhPart = JSON.stringify(db.happyHour || {});
+      const sympathyPart = JSON.stringify(db.sympathyVotes || {});
+      return `${playersPart}###${feedPart}###${gameStatus}###${hhPart}###${sympathyPart}`;
     } catch(e) {
       return JSON.stringify(db);
     }
@@ -191,9 +215,34 @@ class AppStore {
           const data = JSON.parse(event.data);
           if (data.type === "INIT" || data.type === "SYNC_STATE") {
             this.mergeServerState(data.state);
+          } else if (data.type === "HAPPY_HOUR_UPDATE") {
+            if (data.happyHour) this.state.happyHour = data.happyHour;
+            if (data.state) this.mergeServerState(data.state);
+            if (window.app) {
+              window.app.updateHappyHourBanner();
+              window.app.renderAllViews();
+              if (data.happyHour && data.happyHour.active && window.app.fireConfetti) {
+                window.app.fireConfetti();
+                if (window.GameAudio) window.GameAudio.playFanfare();
+              }
+            }
+            if (window.app && window.app.showToast) {
+              if (data.happyHour && data.happyHour.active) {
+                window.app.showToast("⚡ 🍻 <strong>2X HAPPY HOUR AKTIV!</strong> Alle Punkte zählen die nächste Stunde doppelt!");
+              } else {
+                window.app.showToast("⚡ Happy Hour beendet.");
+              }
+            }
           } else if (data.type === "GAME_ENDED") {
             if (data.state) this.mergeServerState(data.state);
-            if (window.AwardsModule) window.AwardsModule.openCelebrationModal();
+            if (window.SympathyModule) {
+              window.SympathyModule.openVoteModal();
+            } else if (window.AwardsModule) {
+              window.AwardsModule.openCelebrationModal();
+            }
+          } else if (data.type === "SYMPATHY_VOTES_UPDATED") {
+            if (data.state) this.mergeServerState(data.state);
+            if (window.app) window.app.renderAllViews();
           } else if (data.type === "GAME_STARTED") {
             if (data.state) this.mergeServerState(data.state);
             if (window.app && window.app.showToast) {
@@ -219,8 +268,6 @@ class AppStore {
     }
     this.lastServerFingerprint = newFingerprint;
 
-    const savedUserId = localStorage.getItem(this.USER_KEY) || (this.state.currentUser ? this.state.currentUser.id : null);
-
     if (Array.isArray(serverDb.players)) {
       this.state.players = serverDb.players;
     }
@@ -233,6 +280,14 @@ class AppStore {
     if (serverDb.gameStatus) {
       this.state.gameStatus = serverDb.gameStatus;
     }
+    if (serverDb.happyHour) {
+      this.state.happyHour = serverDb.happyHour;
+    }
+    if (serverDb.sympathyVotes) {
+      this.state.sympathyVotes = serverDb.sympathyVotes;
+    }
+
+    const savedUserId = localStorage.getItem(this.USER_KEY) || localStorage.getItem("walibi_active_user_id") || (this.state.currentUser ? this.state.currentUser.id : null);
 
     // Eigenen aktiven Nutzer sicherstellen
     if (savedUserId) {
@@ -240,6 +295,26 @@ class AppStore {
       if (myUpdated) {
         this.state.currentUser = { ...myUpdated };
         this.checkAndAutoUnlockSideQuests(savedUserId);
+      } else {
+        // Der Spieler existiert in der DB nicht mehr (z. B. nach Admin-Reset auf 0)
+        this.state.currentUser = null;
+        localStorage.removeItem(this.USER_KEY);
+        localStorage.removeItem("walibi_active_user_id");
+        if (window.ProfileModule) {
+          window.ProfileModule.ensureCurrentUser();
+        }
+      }
+    } else if (this.state.currentUser) {
+      const myUpdated = this.state.players.find(p => p.id === this.state.currentUser.id);
+      if (myUpdated) {
+        this.state.currentUser = { ...myUpdated };
+      } else {
+        this.state.currentUser = null;
+        localStorage.removeItem(this.USER_KEY);
+        localStorage.removeItem("walibi_active_user_id");
+        if (window.ProfileModule) {
+          window.ProfileModule.ensureCurrentUser();
+        }
       }
     }
 
@@ -755,7 +830,7 @@ class AppStore {
     }
   }
 
-  addPlayer(name, house, avatar) {
+  async addPlayer(name, house, avatar) {
     const newPlayer = {
       id: "p_" + Date.now() + "_" + Math.random().toString(36).substr(2, 4),
       name: name.trim(),
@@ -763,11 +838,18 @@ class AppStore {
       avatar: avatar || null,
       points: 0,
       drinksCount: 0,
-      completedQuests: []
+      completedQuests: [],
+      completedSideQuests: [],
+      rideCounts: {},
+      drinksDetail: { beer: 0, shot: 0, longdrink: 0, joint: 0, water: 0 },
+      gutGlaubenCount: 0
     };
     this.state.players.push(newPlayer);
+    this.state.currentUser = newPlayer;
+    localStorage.setItem(this.USER_KEY, newPlayer.id);
+    localStorage.setItem("walibi_active_user_id", newPlayer.id);
     this.saveLocalState();
-    this.updateProfile(newPlayer.id, newPlayer);
+    await this.updateProfile(newPlayer.id, newPlayer);
     return newPlayer;
   }
 
@@ -785,14 +867,15 @@ class AppStore {
     } = options;
 
     let basePoints = typeof outcomePoints === "number" ? outcomePoints : quest.points;
-    let actualPoints = basePoints;
+    let calculatedPoints = basePoints;
 
-    if (isFaithBased) {
-      if (basePoints > 0) {
-        actualPoints = Math.round(basePoints * 0.8); // 20% Ehren-Abzug
-      }
+    if (isFaithBased && basePoints > 0) {
+      calculatedPoints = Math.round(basePoints * 0.8); // 20% Ehren-Abzug
       player.gutGlaubenCount = (player.gutGlaubenCount || 0) + 1;
     }
+
+    const multiplier = this.getPointsMultiplier();
+    let actualPoints = calculatedPoints > 0 ? (calculatedPoints * multiplier) : calculatedPoints;
 
     const requiresVoting = quest.requiresVoting === true;
     const hasWitnesses = Array.isArray(witnessIds) && witnessIds.length > 0;
@@ -892,6 +975,7 @@ class AppStore {
       actualPointsAwarded: initialPoints,
       selectedOutcome: selectedOutcome,
       isFaithBased: isFaithBased,
+      isHappyHour: multiplier > 1,
       witnesses: witnesses,
       witnessPending: requiresWitnessPending,
       photo: photoBase64 || null,
@@ -986,8 +1070,9 @@ class AppStore {
     const player = this.state.players.find(p => p.id === userId);
     if (!player) return null;
 
-    // 5 Punkte für reine Textnachricht, 10 Punkte für Foto/Video
-    const points = photoBase64 ? 10 : 5;
+    // 5 Punkte für reine Textnachricht, 10 Punkte für Foto/Video (2x bei Happy Hour)
+    const basePoints = photoBase64 ? 10 : 5;
+    const points = basePoints * this.getPointsMultiplier();
     player.points = (player.points || 0) + points;
 
     if (this.state.currentUser && this.state.currentUser.id === userId) {
@@ -1041,26 +1126,35 @@ class AppStore {
 
   // --- SCHNELLZÄHLER / DRINKS LOGGEN ---
   async logCounterItem(userId, itemId) {
-    const player = this.state.players.find(p => p.id === userId);
-    const item = (this.state.counterItems || window.COUNTER_ITEMS).find(i => i.id === itemId);
-    if (!player || !item) return;
+    let player = this.state.players.find(p => p.id === userId);
+    if (!player && this.state.currentUser && this.state.currentUser.id === userId) {
+      player = this.state.currentUser;
+      this.state.players.push(player);
+    }
+    if (!player && this.state.players.length > 0) {
+      player = this.state.players[0];
+      userId = player.id;
+    }
+    if (!player) return null;
 
-    player.points += item.points;
-    player.drinksCount = (player.drinksCount || 0) + 1;
+    const item = (this.state.counterItems || window.COUNTER_ITEMS || []).find(i => i.id === itemId) || { id: itemId, name: itemId, points: 5, icon: "🍺" };
+
+    const basePoints = typeof item.points === "number" ? item.points : 5;
+    const points = basePoints * this.getPointsMultiplier();
+    player.points = Number(player.points || 0) + points;
+    player.drinksCount = Number(player.drinksCount || 0) + 1;
 
     if (!player.drinksDetail) {
       player.drinksDetail = { beer: 0, shot: 0, longdrink: 0, joint: 0, water: 0 };
     }
-    player.drinksDetail[itemId] = (player.drinksDetail[itemId] || 0) + 1;
+    player.drinksDetail[itemId] = Number(player.drinksDetail[itemId] || 0) + 1;
 
-    if (this.state.currentUser && this.state.currentUser.id === userId) {
+    if (this.state.currentUser && (this.state.currentUser.id === userId || this.state.currentUser.id === player.id)) {
       this.state.currentUser.points = player.points;
       this.state.currentUser.drinksCount = player.drinksCount;
       this.state.currentUser.drinksDetail = { ...player.drinksDetail };
     }
 
-    // Hinweis: Einzelne Drinks werden nicht mehr in den Live-Feed geschrieben,
-    // um den Feed sauber & übersichtlich für Quests & Schnappschüsse zu halten!
     this.saveLocalState();
 
     try {
@@ -1068,16 +1162,16 @@ class AppStore {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: userId,
+          userId: player.id,
           itemId: item.id,
           itemName: item.name,
           itemIcon: item.icon,
-          points: item.points
+          points: basePoints
         })
       });
     } catch (e) {}
 
-    this.checkAndAutoUnlockSideQuests(userId);
+    this.checkAndAutoUnlockSideQuests(player.id);
     return null;
   }
 
@@ -1158,8 +1252,9 @@ class AppStore {
     if (!feedItem || !player) return;
     if (!text && !photoBase64) return;
 
-    // 2 Punkte für Text-Kommentar, 5 Punkte für Foto-Antwort
-    const commentPoints = photoBase64 ? 5 : 2;
+    // 2 Punkte für Text-Kommentar, 5 Punkte für Foto-Antwort (2x bei Happy Hour)
+    const baseCommentPoints = photoBase64 ? 5 : 2;
+    const commentPoints = baseCommentPoints * this.getPointsMultiplier();
     player.points = (player.points || 0) + commentPoints;
 
     if (this.state.currentUser && this.state.currentUser.id === userId) {
@@ -1184,9 +1279,9 @@ class AppStore {
 
     if (window.app && window.app.showToast) {
       if (photoBase64) {
-        window.app.showToast(`📸 +5 Punkte für deine Foto-Antwort!`);
+        window.app.showToast(`📸 +${commentPoints} Punkte für deine Foto-Antwort!`);
       } else {
-        window.app.showToast(`💬 +2 Punkte für deinen Kommentar!`);
+        window.app.showToast(`💬 +${commentPoints} Punkte für deinen Kommentar!`);
       }
     }
 
@@ -1206,7 +1301,7 @@ class AppStore {
     } catch (e) {}
   }
 
-  // --- EMOJI REAKTIONEN (+5 PUNKTE FÜR DEN BEITRAGS-AUTOR) ---
+  // --- EMOJI REAKTIONEN (+5 PUNKTE FÜR DEN BEITRAGS-AUTOR, 2X BEI HAPPY HOUR) ---
   async toggleReaction(feedId, arg2, arg3) {
     const feedItem = this.state.feed.find(f => f.id === feedId);
     if (!feedItem) return;
@@ -1235,12 +1330,13 @@ class AppStore {
     const userList = feedItem.reactions[emoji];
     const idx = userList.indexOf(userId);
     const postAuthor = this.state.players.find(p => p.id === feedItem.userId);
+    const reactionPoints = 5 * this.getPointsMultiplier();
 
     if (idx >= 0) {
       // Reaktion zurückziehen: -5 Punkte für den Beitrags-Ersteller
       userList.splice(idx, 1);
       if (postAuthor) {
-        postAuthor.points = Math.max(0, (postAuthor.points || 0) - 5);
+        postAuthor.points = Math.max(0, (postAuthor.points || 0) - reactionPoints);
         if (this.state.currentUser && this.state.currentUser.id === postAuthor.id) {
           this.state.currentUser.points = postAuthor.points;
         }
@@ -1249,7 +1345,7 @@ class AppStore {
       // Neue Reaktion: +5 Punkte für den Beitrags-Ersteller
       userList.push(userId);
       if (postAuthor) {
-        postAuthor.points = (postAuthor.points || 0) + 5;
+        postAuthor.points = (postAuthor.points || 0) + reactionPoints;
         if (this.state.currentUser && this.state.currentUser.id === postAuthor.id) {
           this.state.currentUser.points = postAuthor.points;
         }
@@ -1273,6 +1369,68 @@ class AppStore {
         body: JSON.stringify({ feedId, userId, emoji })
       });
     } catch (e) {}
+  }
+
+  // --- 💖 SYMPATHIE- & EISBRECHER-VOTES SPEICHERN ---
+  async submitSympathyVotes(voterId, votes) {
+    if (!this.state.sympathyVotes) this.state.sympathyVotes = {};
+    this.state.sympathyVotes[voterId] = votes;
+
+    // Lokale sofortige Neuberechnung für alle Spieler
+    this.state.players.forEach(player => {
+      const received = [];
+      let totalSympathyPts = 0;
+
+      Object.keys(this.state.sympathyVotes).forEach(vid => {
+        if (vid === player.id) return; // Eigene Stimme zählt nicht für sich selbst
+        const voterObj = this.state.players.find(p => p.id === vid);
+        const voterVotes = this.state.sympathyVotes[vid];
+        if (voterVotes && voterVotes[player.id]) {
+          const voteItem = voterVotes[player.id];
+          const rating = Number(voteItem.rating) || 5;
+          const pts = typeof voteItem.points === 'number' ? voteItem.points : Math.min(50, Math.max(10, rating * 10));
+          totalSympathyPts += pts;
+          received.push({
+            voterId: vid,
+            voterName: voterObj ? voterObj.name : "Mitspieler",
+            voterAvatar: voterObj ? voterObj.avatar : null,
+            rating: rating,
+            points: pts,
+            tag: voteItem.tag || null,
+            comment: voteItem.comment || null
+          });
+        }
+      });
+
+      const oldSympathyPts = Number(player.sympathyPoints) || 0;
+      const diff = totalSympathyPts - oldSympathyPts;
+
+      player.sympathyVotesReceived = received;
+      player.sympathyPoints = totalSympathyPts;
+      player.points = Math.max(0, (Number(player.points) || 0) + diff);
+    });
+
+    this.saveLocalState();
+    if (window.app) window.app.renderAllViews();
+
+    // Server-Cloud-Synchronisation
+    try {
+      const res = await fetch("/api/sympathy/vote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ voterId, votes })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.players) {
+          this.state.players = data.players;
+          if (data.sympathyVotes) this.state.sympathyVotes = data.sympathyVotes;
+          this.saveLocalState();
+        }
+      }
+    } catch(e) {
+      console.warn("Sympathy votes offline fallback:", e);
+    }
   }
 
   // --- HILFSMETHODEN ---

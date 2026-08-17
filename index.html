@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Mr. oder Mrs. Walibi - Sauftour '26</title>
-  <link rel="stylesheet" href="css/style.css?v=2026_v2" />
+  <link rel="stylesheet" href="css/style.css?v=2026_v12" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#ffcc00" />
 </head>
@@ -38,6 +38,37 @@
         <button class="icon-btn btn-menu-accent" id="btnQuickMenuTrigger" onclick="app.openQuickMenu()" title="⚡ Menü & Werkzeuge">⚡</button>
       </div>
     </header>
+
+    <!-- ⚡ 2X HAPPY HOUR LIVE BANNER -->
+    <div id="happyHourLiveBanner" class="happy-hour-banner hidden">
+      <div class="happy-hour-content">
+        <span class="happy-hour-icon">⚡🍻</span>
+        <div class="happy-hour-text">
+          <strong style="color: #ffcc00; letter-spacing: 0.5px;">2X HAPPY HOUR AKTIV!</strong>
+          <span>Alle Punkte zählen doppelt!</span>
+        </div>
+        <span class="happy-hour-badge" id="happyHourCountdown">60:00</span>
+      </div>
+    </div>
+
+    <!-- 👤 GAST-HINWEIS BANNER (WENN NOCH KEIN SPIELER GEWÄHLT) -->
+    <div id="guestPromptBanner" class="happy-hour-banner hidden" style="background: linear-gradient(135deg, #1e293b, #0f172a); border-color: var(--walibi-yellow); flex-direction: column; align-items: stretch; gap: 8px; padding: 12px 14px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer;" onclick="ProfileModule.openProfileSelectModal()">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 24px;">👤✨</span>
+          <div style="text-align: left;">
+            <strong style="color: #ffcc00; font-size: 13px; display: block;">NOCH KEIN SPIELER GEWÄHLT!</strong>
+            <span style="color: #cbd5e1; font-size: 11px;">Tippe hier, um Profil anzulegen & mitzuspielen.</span>
+          </div>
+        </div>
+        <span class="happy-hour-badge" style="background: var(--walibi-yellow); color: #000; font-weight: 900; font-size: 12px; padding: 6px 12px; white-space: nowrap;">STARTEN 👉</span>
+      </div>
+      <div style="display: flex; justify-content: flex-end; border-top: 1px solid rgba(255,255,255,0.12); padding-top: 6px;">
+        <button type="button" onclick="event.stopPropagation(); ProfileModule.logout()" style="background: rgba(239, 68, 68, 0.25); border: 1.5px solid #ef4444; color: #fca5a5; font-size: 11px; font-weight: 800; border-radius: 8px; padding: 5px 12px; cursor: pointer;">
+          🚪 Code wechseln / Abmelden
+        </button>
+      </div>
+    </div>
 
     <!-- TOAST NOTIFICATIONS -->
     <div id="toastContainer" class="toast-container"></div>
@@ -309,6 +340,32 @@
         </div>
       </div>
 
+      <!-- 🍻 HAPPY HOUR 2X PUNKTE STEUERUNG -->
+      <div style="background: linear-gradient(135deg, rgba(245,158,11,0.2), rgba(225,29,72,0.2)); border: 2.5px solid var(--walibi-yellow); border-radius: 12px; padding: 14px; margin-bottom: 14px; text-align: center; box-shadow: 0 0 20px rgba(255,204,0,0.25);">
+        <div style="font-size: 11px; font-weight: 900; color: var(--walibi-yellow); text-transform: uppercase; letter-spacing: 1px;">⚡ 2X HAPPY HOUR (1 STUNDE DOPPELTE PUNKTE)</div>
+        <p style="font-size: 12px; color: #e2e8f0; margin: 6px 0 10px 0; line-height: 1.35;">
+          Aktiviert für <strong>60 Minuten</strong> doppelte Punkte auf alle Quests, Posts, Reaktionen, Kommentare & Drinks!
+        </p>
+        <div id="adminHappyHourStatus" style="font-size: 13px; font-weight: 800; color: #34d399; margin-bottom: 8px;">Status: Inaktiv</div>
+        <button type="button" class="btn-primary" id="btnAdminHappyHour" onclick="ProfileModule.adminToggleHappyHour()" style="background: var(--gradient-gold); color: #000; font-weight: 900; border: 2px solid #fff; font-size: 14px; box-shadow: 0 0 15px rgba(255,204,0,0.4);">
+          🍻 2X HAPPY HOUR STARTEN (60 MIN)
+        </button>
+      </div>
+
+      <!-- 👥 SPIELER-VERWALTUNG & LÖSCHEN -->
+      <div style="background: rgba(15,23,42,0.85); border: 2px solid #334155; border-radius: 12px; padding: 14px; margin-bottom: 14px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <div style="font-size: 13px; font-weight: 900; color: #fff;">👥 SPIELER VERWALTEN</div>
+          <button type="button" onclick="ProfileModule.adminDeleteAllPlayers()" style="background: rgba(239,68,68,0.2); border: 1.5px solid #ef4444; color: #fca5a5; font-size: 11px; font-weight: 800; border-radius: 6px; padding: 4px 8px; cursor: pointer;">
+            🗑️ Alle löschen
+          </button>
+        </div>
+        <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">
+          Entferne einzelne Test-Spieler oder alle Mitspieler auf einmal (Grossek bleibt erhalten):
+        </p>
+        <div id="adminPlayersManageList" style="max-height: 190px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;"></div>
+      </div>
+
       <!-- GEFAHRENZONE / RESET -->
       <div style="background: rgba(225,29,72,0.15); border: 2px solid #ef4444; border-radius: 12px; padding: 14px; margin-bottom: 12px;">
         <div style="font-size: 14px; font-weight: 900; color: #ef4444; margin-bottom: 4px;">🚨 TESTPHASEN- & TOUR-RESET</div>
@@ -321,13 +378,39 @@
       </div>
 
       <!-- DISPLAY & VOLLBILD -->
-      <div style="display: flex; gap: 8px;">
+      <div style="display: flex; gap: 8px; margin-bottom: 12px;">
         <button type="button" class="btn-primary" onclick="ProfileModule.toggleWakeLock()" style="flex: 1; padding: 8px; font-size: 12px; background: #0f766e;">
           ⚡ Display wachhalten
         </button>
         <button type="button" class="btn-primary" onclick="ProfileModule.toggleFullscreen()" style="flex: 1; padding: 8px; font-size: 12px; background: #1e3a8a;">
           📱 Vollbild-Modus
         </button>
+      </div>
+
+      <!-- ABMELDEN -->
+      <div style="border-top: 1px solid rgba(255,255,255,0.15); padding-top: 12px;">
+        <button type="button" class="btn-primary" onclick="ProfileModule.logout()" style="width: 100%; padding: 8px; font-size: 12px; background: rgba(225,29,72,0.25); border: 1.5px solid #f43f5e; color: #fda4af; font-weight: 800;">
+          🚪 Admin abmelden (Zurück zur Code-Eingabe)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 💖 13. EISBRECHER & SYMPATHIE-VOTING MODAL (VOR DEM ZEUGNIS) -->
+  <div id="sympathyVoteModal" class="modal-overlay hidden" style="z-index: 590; background: rgba(5,8,16,0.97);">
+    <div class="modal-container" style="max-width: 500px; max-height: 92vh; overflow-y: auto; border: 3.5px solid #ec4899; box-shadow: 0 0 35px rgba(236,72,153,0.45);">
+      <div class="modal-header" style="border-bottom: 2px solid rgba(236,72,153,0.3); padding-bottom: 8px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 24px;">❄️🔨💖</span>
+          <div>
+            <h2 class="modal-title" style="color: #f472b6; font-size: 18px; line-height: 1.2;">EISBRECHER & SYMPATHIE-VOTING</h2>
+            <div style="font-size: 11px; color: var(--text-muted); font-weight: 700;">Sauftour '26 Finale</div>
+          </div>
+        </div>
+        <button class="btn-close-modal" onclick="SympathyModule.closeVoteModal()">✕</button>
+      </div>
+      <div id="sympathyVoteModalBody">
+        <!-- Gefüllt per SympathyModule JS -->
       </div>
     </div>
   </div>
@@ -421,23 +504,50 @@
         <button type="submit" class="btn-primary" style="background: var(--gradient-gold); color: #000; font-weight: 900; border: 2px solid #fff; margin-top: 4px;">
           💾 Profil & Namen speichern
         </button>
+
+        <div style="display: flex; gap: 8px; margin-top: 12px; border-top: 1px solid rgba(255,255,255,0.12); padding-top: 12px;">
+          <button type="button" class="btn-primary" onclick="ProfileModule.openProfileSelectModal(true)" style="flex: 1; padding: 8px 10px; font-size: 12px; background: #334155; border: 1.5px solid #64748b; color: #fff; font-weight: 800;">
+            👤 Profil wechseln
+          </button>
+          <button type="button" class="btn-primary" onclick="ProfileModule.logout()" style="flex: 1; padding: 8px 10px; font-size: 12px; background: rgba(225,29,72,0.25); border: 1.5px solid #f43f5e; color: #fda4af; font-weight: 800;">
+            🚪 Abmelden (Code neu)
+          </button>
+        </div>
       </form>
     </div>
   </div>
 
   <!-- ONBOARDING & ERST-START MODAL (WIRD NUR BEIM ERSTEN PARK-BESUCH ANGEZEIGT) -->
   <div id="profileSelectModal" class="modal-overlay hidden">
-    <div class="modal-container">
+    <div class="modal-container" style="max-width: 440px;">
       <div class="modal-header">
-        <h2 class="modal-title">Wer bist du?</h2>
+        <h2 class="modal-title">🎉 Willkommen bei Walibi '26!</h2>
         <button class="btn-close-modal" onclick="document.getElementById('profileSelectModal').classList.add('hidden')">✕</button>
       </div>
-      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Wähle deinen Spieler-Account oder erstelle einen neuen Teilnehmer:</p>
-      
-      <div id="profilePlayersList" style="max-height: 280px; overflow-y: auto; margin-bottom: 14px;"></div>
 
-      <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px;">
-        <button class="btn-primary" id="btnOpenCreatePlayer" style="background: var(--gradient-gold); color: #000 !important; font-weight: 900; border: 2.5px solid #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">➕ NEUEN SPIELER ANLEGEN</button>
+      <div style="text-align: center; padding: 6px 0 10px 0;">
+        <div style="font-size: 42px; margin-bottom: 6px;">👤✨</div>
+        <h3 style="color: #fff; font-size: 17px; margin-bottom: 6px;">Bist du neu hier?</h3>
+        <p style="font-size: 13px; color: var(--text-muted); line-height: 1.4; margin: 0 auto 14px auto;">
+          Erstelle jetzt dein Profil (Name, Haus & Kult-Avatar), um direkt mitzuspielen und Punkte zu sammeln!
+        </p>
+
+        <button class="btn-primary" id="btnOpenCreatePlayer" style="background: var(--gradient-gold); color: #000 !important; font-weight: 900; border: 2.5px solid #fff; font-size: 15px; padding: 14px 20px; box-shadow: 0 0 20px rgba(255,204,0,0.5);">
+          ➕ NEUE PERSON / PROFIL ANLEGEN
+        </button>
+      </div>
+
+      <div id="existingPlayersSection" class="hidden" style="border-top: 1px solid rgba(255,255,255,0.15); padding-top: 12px; margin-top: 10px;">
+        <div style="font-size: 11px; font-weight: 800; color: var(--walibi-yellow); text-transform: uppercase; margin-bottom: 8px; text-align: center;">
+          Oder bestehendes Profil wählen:
+        </div>
+        <div id="profilePlayersList" style="max-height: 200px; overflow-y: auto;"></div>
+      </div>
+
+      <div style="border-top: 1px solid rgba(255,255,255,0.12); padding-top: 10px; margin-top: 12px; text-align: center;">
+        <button type="button" onclick="ProfileModule.logout()" style="background: none; border: none; color: var(--text-muted); font-size: 12px; cursor: pointer; text-decoration: underline;">
+          🚪 Anderen Zugangscode eingeben
+        </button>
       </div>
     </div>
   </div>
@@ -480,7 +590,13 @@
           </div>
         </div>
 
-        <button type="submit" class="btn-primary" style="margin-top: 8px;">Mitspielen! 🚀</button>
+        <button type="submit" class="btn-primary" style="margin-top: 8px; background: var(--gradient-gold); color: #000; font-weight: 900; border: 2.5px solid #fff;">Mitspielen! 🚀</button>
+
+        <div style="border-top: 1px solid rgba(255,255,255,0.12); padding-top: 10px; margin-top: 12px; text-align: center;">
+          <button type="button" onclick="ProfileModule.logout()" style="background: none; border: none; color: var(--text-muted); font-size: 12px; cursor: pointer; text-decoration: underline;">
+            🚪 Anderen Zugangscode eingeben / Abmelden
+          </button>
+        </div>
       </form>
     </div>
   </div>
@@ -719,11 +835,27 @@
           </div>
         </button>
 
+        <button class="quick-menu-card" onclick="app.closeQuickMenu(); ProfileModule.openCharacterLoreModal();" style="border-color: #38bdf8; background: rgba(56,189,248,0.15);">
+          <span class="quick-menu-icon">🎭</span>
+          <div class="quick-menu-text">
+            <span class="quick-menu-title" style="color: #38bdf8;">Kult-Charaktere & Avatar-Lexikon</span>
+            <span class="quick-menu-desc">23 Steckbriefe, Historie, Sprüche & Stärken</span>
+          </div>
+        </button>
+
         <button class="quick-menu-card" onclick="app.closeQuickMenu(); ProfileModule.openMyProfileModal();">
           <span class="quick-menu-icon">⚙️</span>
           <div class="quick-menu-text">
             <span class="quick-menu-title">Mein Profil & Haus</span>
             <span class="quick-menu-desc">Name, Selfie & Statistiken anpassen</span>
+          </div>
+        </button>
+
+        <button class="quick-menu-card" onclick="app.closeQuickMenu(); SympathyModule.openVoteModal();" style="border-color: #ec4899; background: rgba(236,72,153,0.15);">
+          <span class="quick-menu-icon">💖</span>
+          <div class="quick-menu-text">
+            <span class="quick-menu-title" style="color: #f472b6;">Sympathie-Voting & Zeugnis</span>
+            <span class="quick-menu-desc">Eisbrecher-Punkte vergeben & Sauftour-Zeugnis '26</span>
           </div>
         </button>
 
@@ -742,6 +874,14 @@
           </button>
         </div>
 
+        <button class="quick-menu-card admin-only-card" id="menuHappyHourBtn" style="display: none; border-color: #ffcc00; background: linear-gradient(135deg, rgba(245,158,11,0.25), rgba(225,29,72,0.25));" onclick="app.closeQuickMenu(); ProfileModule.adminToggleHappyHour();">
+          <span class="quick-menu-icon">⚡🍻</span>
+          <div class="quick-menu-text">
+            <span class="quick-menu-title" style="color: var(--walibi-yellow);">2X Happy Hour zünden</span>
+            <span class="quick-menu-desc">60 Min doppelte Punkte & Konfetti</span>
+          </div>
+        </button>
+
         <button class="quick-menu-card admin-only-card" id="menuAdminBtn" style="display: none; border-color: var(--walibi-yellow); background: rgba(255,204,0,0.18);" onclick="app.closeQuickMenu(); ProfileModule.openAdminModal();">
           <span class="quick-menu-icon">👑</span>
           <div class="quick-menu-text">
@@ -749,6 +889,27 @@
             <span class="quick-menu-desc">Punkte-Korrektur & Notfall-Reset</span>
           </div>
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 14. 🎭 KULT-CHARAKTERE & AVATAR-LEXIKON    -->
+  <!-- ========================================== -->
+  <div id="characterLoreModal" class="modal-overlay hidden" style="z-index: 520;">
+    <div class="modal-container" style="max-width: 480px; max-height: 90vh; overflow-y: auto; border: 3px solid var(--walibi-yellow);">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 24px;">🎭📖</span>
+          <div>
+            <h2 class="modal-title" style="color: var(--walibi-yellow); font-size: 18px; line-height: 1.2;">Avatar- & Charakter-Lexikon</h2>
+            <div style="font-size: 11px; color: var(--text-muted); font-weight: 700;">23 Kult-Helden, Steckbriefe & Sprüche</div>
+          </div>
+        </div>
+        <button class="btn-close-modal" onclick="document.getElementById('characterLoreModal').classList.add('hidden')">✕</button>
+      </div>
+      <div id="characterLoreListContainer">
+        <!-- Dynamisch per ProfileModule.renderCharacterLoreList() -->
       </div>
     </div>
   </div>
@@ -834,24 +995,24 @@
   </div>
 
   <!-- JAVASCRIPT MODULES -->
-  <script src="js/audio.js?v=2026_v2"></script>
-  <script src="js/data/rulesData.js?v=2026_v2"></script>
-  <script src="js/data/mascotsData.js?v=2026_v2"></script>
-  <script src="js/data/partyQuotesData.js?v=2026_v2"></script>
-  <script src="js/data/attractionsData.js?v=2026_v2"></script>
-  <script src="js/data/questsData.js?v=2026_v2"></script>
-  <script src="js/data/parkMapData.js?v=2026_v2"></script>
-  <script src="js/camera.js?v=2026_v2"></script>
-  <script src="js/store.js?v=2026_v2"></script>
-  <script src="js/profile.js?v=2026_v2"></script>
-  <script src="js/parkMap.js?v=2026_v2"></script>
-  <script src="js/parkGuide.js?v=2026_v2"></script>
-  <script src="js/quests.js?v=2026_v2"></script>
-  <script src="js/counter.js?v=2026_v2"></script>
-  <script src="js/feed.js?v=2026_v2"></script>
-  <script src="js/leaderboard.js?v=2026_v2"></script>
-  <script src="js/awards.js?v=2026_v2"></script>
-  <script src="js/app.js?v=2026_v2"></script>
+  <script src="js/audio.js?v=2026_v15"></script>
+  <script src="js/data/rulesData.js?v=2026_v15"></script>
+  <script src="js/data/mascotsData.js?v=2026_v15"></script>
+  <script src="js/data/partyQuotesData.js?v=2026_v15"></script>
+  <script src="js/data/attractionsData.js?v=2026_v15"></script>
+  <script src="js/data/questsData.js?v=2026_v15"></script>
+  <script src="js/data/parkMapData.js?v=2026_v15"></script>
+  <script src="js/camera.js?v=2026_v15"></script>
+  <script src="js/store.js?v=2026_v15"></script>
+  <script src="js/profile.js?v=2026_v15"></script>
+  <script src="js/parkMap.js?v=2026_v15"></script>
+  <script src="js/parkGuide.js?v=2026_v15"></script>
+  <script src="js/quests.js?v=2026_v15"></script>
+  <script src="js/counter.js?v=2026_v15"></script>
+  <script src="js/feed.js?v=2026_v15"></script>
+  <script src="js/leaderboard.js?v=2026_v15"></script>
+  <script src="js/awards.js?v=2026_v15"></script>
+  <script src="js/app.js?v=2026_v15"></script>
 
 </body>
 </html>

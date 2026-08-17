@@ -2867,6 +2867,7 @@ body {
 }
 
 .avatar-preset-item {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2891,6 +2892,31 @@ body {
   box-shadow: 0 0 12px rgba(255, 204, 0, 0.4);
 }
 
+.preset-info-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 16px;
+  height: 16px;
+  background: rgba(0, 0, 0, 0.75);
+  border: 1px solid var(--walibi-yellow);
+  color: var(--walibi-yellow);
+  border-radius: 50%;
+  font-size: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+  transition: transform 0.15s ease;
+}
+
+.preset-info-badge:hover {
+  transform: scale(1.25);
+  background: var(--walibi-yellow);
+  color: #000;
+}
+
 .preset-avatar-thumb {
   width: 44px;
   height: 44px;
@@ -2907,6 +2933,118 @@ body {
   text-align: center;
   line-height: 1.1;
   word-break: break-word;
+}
+
+/* --- 🎭 CHARACTER LORE MODAL & DOSSIER CARDS --- */
+.lore-category-header {
+  font-family: var(--font-headline);
+  font-size: 16px;
+  color: var(--walibi-yellow);
+  letter-spacing: 0.6px;
+  margin: 12px 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: uppercase;
+  border-bottom: 1.5px solid rgba(255, 204, 0, 0.3);
+  padding-bottom: 4px;
+}
+
+.lore-card {
+  background: var(--game-panel-light);
+  border: 2px solid rgba(255, 255, 255, 0.16);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  margin-bottom: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.lore-card:hover {
+  border-color: var(--walibi-yellow);
+  transform: translateY(-2px);
+}
+
+.lore-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.lore-card-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2.5px solid var(--walibi-yellow);
+  box-shadow: 0 0 12px rgba(255, 204, 0, 0.4);
+  flex-shrink: 0;
+}
+
+.lore-card-title {
+  font-size: 15px;
+  font-weight: 900;
+  color: #ffffff;
+  line-height: 1.2;
+}
+
+.lore-card-subtitle {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--walibi-pink);
+}
+
+.lore-card-quote {
+  background: rgba(0, 0, 0, 0.45);
+  border-left: 3.5px solid var(--walibi-yellow);
+  padding: 6px 10px;
+  border-radius: 0 8px 8px 0;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--walibi-yellow);
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.lore-card-history {
+  font-size: 12px;
+  color: #cbd5e1;
+  line-height: 1.35;
+  margin-bottom: 8px;
+}
+
+.lore-card-features {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-bottom: 8px;
+}
+
+.lore-pills-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.lore-pill {
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.lore-pill-strength {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid #10b981;
+  color: #6ee7b7;
+}
+
+.lore-pill-weakness {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid #ef4444;
+  color: #fca5a5;
 }
 
 /* --- VIDEO MEDIA IN FEED & QUESTS --- */
@@ -3990,4 +4128,108 @@ body {
   text-align: center;
   flex-shrink: 0;
 }
+
+/* --- ⚡ 2X HAPPY HOUR BANNER --- */
+.happy-hour-banner {
+  background: linear-gradient(90deg, #d97706, #e11d48, #d97706);
+  background-size: 200% 200%;
+  animation: happyHourGradient 3s ease infinite, happyHourPulse 1.8s infinite;
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  margin: 6px 12px 10px 12px;
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.6), inset 0 0 10px rgba(255, 255, 255, 0.3);
+  border: 2px solid #ffcc00;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+@keyframes happyHourGradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes happyHourPulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 14px rgba(245, 158, 11, 0.5); }
+  50% { transform: scale(1.015); box-shadow: 0 0 26px rgba(245, 158, 11, 0.9); }
+}
+
+.happy-hour-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 8px;
+}
+
+.happy-hour-icon {
+  font-size: 22px;
+  animation: bounce 1s infinite alternate;
+}
+
+.happy-hour-text {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.happy-hour-badge {
+  background: #000;
+  color: #ffcc00;
+  font-family: var(--font-mono, monospace);
+  font-weight: 900;
+  font-size: 13px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1.5px solid #ffcc00;
+  white-space: nowrap;
+}
+
+/* ==================================================== */
+/* 💖 EISBRECHER & SYMPATHIE-VOTING STYLES             */
+/* ==================================================== */
+.sympathy-player-card {
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.sympathy-player-card:hover {
+  transform: translateY(-2px);
+  border-color: #f472b6 !important;
+  box-shadow: 0 6px 20px rgba(236, 72, 153, 0.35) !important;
+}
+
+.sympathy-star-btn {
+  user-select: none;
+  cursor: pointer;
+}
+
+.sympathy-star-btn:hover {
+  transform: scale(1.08);
+  border-color: #ffcc00 !important;
+  background: rgba(255, 204, 0, 0.25) !important;
+}
+
+.sympathy-star-btn.active {
+  box-shadow: 0 0 10px rgba(255, 204, 0, 0.4);
+}
+
+.sympathy-tag-btn {
+  user-select: none;
+  cursor: pointer;
+}
+
+.sympathy-tag-btn:hover {
+  border-color: #f472b6 !important;
+  transform: scale(1.04);
+}
+
+.sympathy-tag-btn.active {
+  box-shadow: 0 0 12px rgba(236, 72, 153, 0.55);
+  border-color: #fff !important;
+}
+
 
