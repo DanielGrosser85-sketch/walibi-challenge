@@ -273,17 +273,24 @@ function handleApiRequest(pathname, req, res) {
           name: data.name || "Spieler",
           house: data.house || "Haus 1",
           avatar: data.avatar || null,
-          points: 0,
-          drinksCount: 0,
-          completedQuests: [],
-          rideCounts: {},
-          drinksDetail: { beer: 0, shot: 0, longdrink: 0, joint: 0, water: 0 }
+          points: data.points !== undefined ? Number(data.points) : 0,
+          drinksCount: data.drinksCount !== undefined ? Number(data.drinksCount) : 0,
+          completedQuests: Array.isArray(data.completedQuests) ? data.completedQuests : [],
+          completedSideQuests: Array.isArray(data.completedSideQuests) ? data.completedSideQuests : [],
+          rideCounts: (data.rideCounts && typeof data.rideCounts === 'object') ? data.rideCounts : {},
+          drinksDetail: data.drinksDetail || { beer: 0, shot: 0, longdrink: 0, joint: 0, water: 0 }
         };
         db.players.push(p);
       } else {
-        if (data.name) p.name = data.name;
-        if (data.house) p.house = data.house;
-        if (data.avatar) p.avatar = data.avatar;
+        if (data.name !== undefined) p.name = data.name;
+        if (data.house !== undefined) p.house = data.house;
+        if (data.avatar !== undefined) p.avatar = data.avatar;
+        if (data.points !== undefined) p.points = Number(data.points);
+        if (data.drinksCount !== undefined) p.drinksCount = Number(data.drinksCount);
+        if (Array.isArray(data.completedQuests)) p.completedQuests = data.completedQuests;
+        if (Array.isArray(data.completedSideQuests)) p.completedSideQuests = data.completedSideQuests;
+        if (data.rideCounts && typeof data.rideCounts === 'object') p.rideCounts = data.rideCounts;
+        if (data.drinksDetail && typeof data.drinksDetail === 'object') p.drinksDetail = data.drinksDetail;
       }
 
       // Speichere Avatar-Foto auf Festplatte, falls Base64 Upload
@@ -320,6 +327,47 @@ function handleApiRequest(pathname, req, res) {
     return;
   }
 
+  // POST /api/attraction/log (Achterbahn-Fahrt zählen)
+  if (pathname === '/api/attraction/log' && req.method === 'POST') {
+    parseJsonBody(req, (err, data) => {
+      if (err || !data.userId || !data.attrId) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Ungültige Daten' }));
+        return;
+      }
+
+      const player = db.players.find(p => p.id === data.userId);
+      if (!player) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Spieler nicht gefunden' }));
+        return;
+      }
+
+      if (!player.rideCounts) player.rideCounts = {};
+      const delta = data.delta !== undefined ? Number(data.delta) : 1;
+      const current = player.rideCounts[data.attrId] || 0;
+      const newCount = Math.max(0, current + delta);
+      player.rideCounts[data.attrId] = newCount;
+
+      if (delta > 0) {
+        player.points = (player.points || 0) + (5 * delta);
+      } else if (delta < 0 && current > 0) {
+        player.points = Math.max(0, (player.points || 0) + (5 * delta));
+      }
+
+      saveDb();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        success: true,
+        player,
+        rideCounts: player.rideCounts,
+        points: player.points,
+        count: newCount
+      }));
+    });
+    return;
+  }
+
   // POST /api/quest/complete
   if (pathname === '/api/quest/complete' && req.method === 'POST') {
     parseJsonBody(req, (err, data) => {
@@ -343,14 +391,27 @@ function handleApiRequest(pathname, req, res) {
         if (savedUrl) photoUrl = savedUrl;
       }
 
+      const isFaithBased = data.isFaithBased === true;
+      if (isFaithBased) {
+        player.gutGlaubenCount = (player.gutGlaubenCount || 0) + 1;
+      }
+
       const requiresVoting = data.requiresVoting === true;
-      const initialPoints = requiresVoting ? 0 : (data.points || 0);
+      const requiresWitnessPending = data.requiresWitnessPending === true;
+      const points = typeof data.points === 'number' ? data.points : 0;
+
+      let initialPoints = 0;
+      if (points < 0) {
+        // Malus / Minuspunkte sofort abziehen
+        initialPoints = points;
+        player.points = Math.max(0, (player.points || 0) + points);
+      } else if (!requiresVoting && !requiresWitnessPending) {
+        initialPoints = points;
+        player.points = (player.points || 0) + points;
+      }
 
       if (!player.completedQuests.includes(data.questId)) {
         player.completedQuests.push(data.questId);
-      }
-      if (!requiresVoting) {
-        player.points += initialPoints;
       }
 
       // Automatische Achterbahn-Fahrt-Zählung
@@ -388,8 +449,13 @@ function handleApiRequest(pathname, req, res) {
         questTitle: data.questTitle,
         questDescription: data.questDescription,
         questIcon: data.questIcon || "🎯",
-        points: data.points || 0,
+        points: points,
+        basePoints: data.basePoints || points,
         actualPointsAwarded: initialPoints,
+        selectedOutcome: data.selectedOutcome || null,
+        isFaithBased: isFaithBased,
+        witnesses: data.witnesses || [],
+        witnessPending: requiresWitnessPending,
         photo: photoUrl || null,
         isVideo: isVideo,
         userComment: data.userComment || "",
@@ -397,7 +463,7 @@ function handleApiRequest(pathname, req, res) {
         requiresVoting: requiresVoting,
         votingLabel: data.votingLabel || "Leistung & Ausführung",
         votes: {},
-        votingUnlocked: !requiresVoting,
+        votingUnlocked: !requiresVoting && !requiresWitnessPending,
         reactions: { "🔥": [], "🍺": [], "👑": [], "💀": [], "👏": [] },
         comments: data.userComment ? [{
           id: "cmt_" + Date.now(),
@@ -414,6 +480,49 @@ function handleApiRequest(pathname, req, res) {
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ success: true, feedItem, playerPoints: player.points }));
+    });
+    return;
+  }
+
+  // POST /api/quest/confirm-witness (Zeugen-Bestätigung durch Mitspieler)
+  if (pathname === '/api/quest/confirm-witness' && req.method === 'POST') {
+    parseJsonBody(req, (err, data) => {
+      if (err || !data.feedItemId || !data.witnessUserId) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Ungültige Bestätigungs-Daten' }));
+        return;
+      }
+
+      const item = db.feed.find(f => f.id === data.feedItemId);
+      if (!item || !item.witnesses) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Beitrag nicht gefunden' }));
+        return;
+      }
+
+      const witness = item.witnesses.find(w => w.userId === data.witnessUserId);
+      if (!witness) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Zeuge nicht gelistet' }));
+        return;
+      }
+
+      witness.confirmed = true;
+      witness.confirmedAt = new Date().toISOString();
+
+      const author = db.players.find(p => p.id === item.userId);
+      if (item.witnessPending && !item.requiresVoting) {
+        item.witnessPending = false;
+        item.actualPointsAwarded = item.points;
+        if (author) {
+          author.points = (author.points || 0) + item.points;
+        }
+      }
+
+      saveDb();
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, feedItem: item, authorPoints: author ? author.points : 0 }));
     });
     return;
   }
@@ -441,8 +550,9 @@ function handleApiRequest(pathname, req, res) {
       }
 
       const isVideo = photoUrl && (photoUrl.endsWith('.mp4') || photoUrl.endsWith('.webm') || photoUrl.endsWith('.mov'));
-      const points = 10; // 10 Spaß-Punkte für spontane Gruppen-Posts!
-      player.points += points;
+      // 5 Punkte für einfache Text-Nachricht, 10 Punkte für Bild / Video
+      const points = photoUrl ? 10 : 5;
+      player.points = (player.points || 0) + points;
 
       const feedItem = {
         id: "feed_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
@@ -455,6 +565,7 @@ function handleApiRequest(pathname, req, res) {
         photo: photoUrl,
         isVideo: isVideo,
         points: points,
+        actualPointsAwarded: points,
         timestamp: new Date().toISOString(),
         reactions: { "🔥": [], "🍺": [], "👑": [], "💀": [], "👏": [] },
         comments: []
@@ -469,7 +580,7 @@ function handleApiRequest(pathname, req, res) {
     return;
   }
 
-  // POST /api/counter/log
+  // POST /api/counter/log (Getränke / Schnellzähler)
   if (pathname === '/api/counter/log' && req.method === 'POST') {
     parseJsonBody(req, (err, data) => {
       if (err || !data.userId || !data.itemId) {
@@ -495,27 +606,65 @@ function handleApiRequest(pathname, req, res) {
       }
       player.drinksDetail[data.itemId] = (player.drinksDetail[data.itemId] || 0) + 1;
 
-      const feedItem = {
-        id: "feed_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
-        type: "drink",
+      // HINWEIS: Einzelne Drinks werden nicht mehr in den Feed geschoben,
+      // damit der Live-Feed übersichtlich für Quests & Schnappschüsse bleibt!
+      saveDb();
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        success: true,
+        playerPoints: player.points,
+        drinksCount: player.drinksCount,
+        drinksDetail: player.drinksDetail
+      }));
+    });
+    return;
+  }
+
+  // POST /api/achievement/unlock (Meilenstein / Errungenschaft im Live-Feed teilen)
+  if (pathname === '/api/achievement/unlock' && req.method === 'POST') {
+    parseJsonBody(req, (err, data) => {
+      if (err || !data.userId || !data.achievement) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Ungültige Achievement-Daten' }));
+        return;
+      }
+
+      const player = db.players.find(p => p.id === data.userId);
+      if (!player) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Spieler nicht gefunden' }));
+        return;
+      }
+
+      const sq = data.achievement;
+      const feedItem = data.feedItem || {
+        id: "feed_achieve_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
+        type: "achievement",
         userId: player.id,
         userName: player.name,
         userAvatar: player.avatar,
         userHouse: player.house,
-        itemId: data.itemId,
-        itemName: data.itemName,
-        itemIcon: data.itemIcon || "🍺",
-        points: points,
+        achievementId: sq.id,
+        achievementTitle: sq.title,
+        achievementDesc: sq.desc,
+        achievementIcon: sq.icon || "🏆",
+        points: sq.points || 25,
+        actualPointsAwarded: sq.points || 25,
         timestamp: new Date().toISOString(),
-        reactions: { "🍻": [], "🔥": [], "💀": [] },
+        reactions: { "🔥": [], "🍺": [], "👑": [], "💀": [], "👏": [] },
         comments: []
       };
 
-      db.feed.unshift(feedItem);
-      saveDb();
+      // Duplikate im Feed vermeiden
+      const alreadyExists = db.feed.some(f => f.userId === player.id && f.achievementId === sq.id);
+      if (!alreadyExists) {
+        db.feed.unshift(feedItem);
+        saveDb();
+      }
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: true, feedItem, playerPoints: player.points, drinksDetail: player.drinksDetail }));
+      res.end(JSON.stringify({ success: true, feedItem }));
     });
     return;
   }
@@ -554,6 +703,7 @@ function handleApiRequest(pathname, req, res) {
 
       if (votePercentage >= 60) {
         item.votingUnlocked = true;
+        item.votingCompleted = true;
         const previousAwarded = item.actualPointsAwarded || 0;
         const pointDiff = calculatedPoints - previousAwarded;
 
@@ -570,15 +720,15 @@ function handleApiRequest(pathname, req, res) {
       saveDb();
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: true, item }));
+      res.end(JSON.stringify({ success: true, item, feedItem: item }));
     });
     return;
   }
 
-  // POST /api/comment
+  // POST /api/comment (Text & Foto-Antworten)
   if (pathname === '/api/comment' && req.method === 'POST') {
     parseJsonBody(req, (err, data) => {
-      if (err || !data.feedId || !data.userId || !data.text) {
+      if (err || !data.feedId || !data.userId || (!data.text && !data.photoBase64)) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Ungültige Kommentar-Daten' }));
         return;
@@ -592,13 +742,27 @@ function handleApiRequest(pathname, req, res) {
         return;
       }
 
+      let photoUrl = null;
+      if (data.photoBase64 && (data.photoBase64.startsWith('data:image') || data.photoBase64.startsWith('data:video'))) {
+        const savedUrl = saveMediaBase64(data.photoBase64, 'comment');
+        if (savedUrl) photoUrl = savedUrl;
+      } else if (data.photoBase64 && typeof data.photoBase64 === 'string') {
+        photoUrl = data.photoBase64;
+      }
+
+      // 2 Punkte für Text-Kommentar, 5 Punkte für Foto-Kommentar
+      const commentPoints = photoUrl ? 5 : 2;
+      player.points = (player.points || 0) + commentPoints;
+
       if (!item.comments) item.comments = [];
       const newComment = {
         id: "c_" + Date.now() + "_" + Math.random().toString(36).substr(2, 4),
         userId: player.id,
         userName: player.name,
         userAvatar: player.avatar,
-        text: data.text.trim(),
+        text: (data.text || "").trim(),
+        photo: photoUrl,
+        points: commentPoints,
         timestamp: new Date().toISOString()
       };
 
@@ -606,12 +770,12 @@ function handleApiRequest(pathname, req, res) {
       saveDb();
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: true, comment: newComment }));
+      res.end(JSON.stringify({ success: true, comment: newComment, playerPoints: player.points }));
     });
     return;
   }
 
-  // POST /api/reaction
+  // POST /api/reaction (+5 Punkte für den Beitrags-Autor pro Reaktion)
   if (pathname === '/api/reaction' && req.method === 'POST') {
     parseJsonBody(req, (err, data) => {
       if (err || !data.feedId || !data.userId || !data.emoji) {
@@ -632,16 +796,24 @@ function handleApiRequest(pathname, req, res) {
 
       const userList = item.reactions[data.emoji];
       const idx = userList.indexOf(data.userId);
+      const postAuthor = db.players.find(p => p.id === item.userId);
+
       if (idx >= 0) {
         userList.splice(idx, 1);
+        if (postAuthor) {
+          postAuthor.points = Math.max(0, (postAuthor.points || 0) - 5);
+        }
       } else {
         userList.push(data.userId);
+        if (postAuthor) {
+          postAuthor.points = (postAuthor.points || 0) + 5;
+        }
       }
 
       saveDb();
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: true, reactions: item.reactions }));
+      res.end(JSON.stringify({ success: true, reactions: item.reactions, postAuthorPoints: postAuthor ? postAuthor.points : 0 }));
     });
     return;
   }
@@ -719,23 +891,26 @@ function handleApiRequest(pathname, req, res) {
         return;
       }
 
-      // Alle Spieler zurücksetzen auf 0
+      // Alle Spieler zurücksetzen auf 0 (inkl. Nebenquests & Achterbahn-Zähler)
       db.players.forEach(p => {
         p.points = 0;
         p.drinksCount = 0;
         p.completedQuests = [];
+        p.completedSideQuests = [];
         p.rideCounts = {};
         p.drinksDetail = { beer: 0, shot: 0, longdrink: 0, joint: 0, water: 0 };
       });
 
-      // Feed komplett leeren
+      // Feed komplett leeren & Spiel reaktivieren
       db.feed = [];
       db.gameStatus = { isRunning: true, startedAt: new Date().toISOString() };
       saveDb();
 
-      console.log("🚨 ADMIN RESET DURCHGEFÜHRT: Alle Punkte, Feed & Statistiken auf 0 gesetzt!");
+      broadcastSSE({ type: "SYNC_STATE", state: db });
+
+      console.log("🚨 ADMIN RESET DURCHGEFÜHRT: Alle Punkte, Nebenquests, Feed & Statistiken auf 0 gesetzt!");
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: true, message: 'Spiel vollständig zurückgesetzt' }));
+      res.end(JSON.stringify({ success: true, message: 'Spiel vollständig zurückgesetzt', state: db }));
     });
     return;
   }

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Mr. oder Mrs. Walibi - Sauftour '26</title>
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/style.css?v=2026_v2" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#ffcc00" />
 </head>
@@ -34,9 +34,7 @@
 
       <div class="header-actions">
         <button class="icon-btn" id="btnAdminPanel" onclick="ProfileModule.openAdminModal()" title="👑 Admin-Konsole (grossek)" style="display: none; border-color: var(--walibi-yellow); background: rgba(255,204,0,0.25);">👑</button>
-        <button class="icon-btn" id="btnHeaderSchedule" onclick="ProfileModule.openScheduleModal()" title="⏰ Samstag-Zeitplan">⏰</button>
-        <button class="icon-btn" id="btnHeaderRules" onclick="ProfileModule.openRulesModal()" title="📜 Offizielle Regeln & Kodex">📜</button>
-        <button class="icon-btn" id="btnEditProfile" onclick="ProfileModule.openMyProfileModal()" title="⚙️ Spieler-Eigenschaften & Avatare">⚙️</button>
+        <button class="icon-btn" id="btnHeaderMap" onclick="ParkMapModule.openModal()" title="🗺️ Walibi Park-Map (BETA)" style="border-color: var(--walibi-yellow); background: rgba(255,204,0,0.22); font-size: 16px;">🗺️</button>
         <button class="icon-btn btn-menu-accent" id="btnQuickMenuTrigger" onclick="app.openQuickMenu()" title="⚡ Menü & Werkzeuge">⚡</button>
       </div>
     </header>
@@ -96,10 +94,19 @@
       </div>
 
       <!-- SPONTANER SOCIAL POST / SCHNAPPSCHUSS BUTTON -->
-      <div style="margin-bottom: 14px;">
+      <div style="margin-bottom: 10px;">
         <button class="btn-create-social-post" id="btnOpenSocialPost">
-          <span>📸</span> Spontanen Schnappschuss / Post teilen (+10 Pkt)
+          <span>📸</span> Schnappschuss (+10 Pkt) / Status posten (+5 Pkt)
         </button>
+      </div>
+
+      <!-- FEED FILTER BAR -->
+      <div class="feed-filters-scroll" id="feedFiltersBar">
+        <button class="feed-filter-btn active" data-filter="all" onclick="FeedModule.setFilter('all')">🌟 Alle</button>
+        <button class="feed-filter-btn" data-filter="my_posts" onclick="FeedModule.setFilter('my_posts')">👤 Meine Posts</button>
+        <button class="feed-filter-btn" data-filter="my_comments" onclick="FeedModule.setFilter('my_comments')">💬 Meine Kommentare</button>
+        <button class="feed-filter-btn" data-filter="to_vote" onclick="FeedModule.setFilter('to_vote')">⏳ Noch zu voten</button>
+        <button class="feed-filter-btn" data-filter="voted" onclick="FeedModule.setFilter('voted')">✅ Schon gevotet</button>
       </div>
 
       <!-- FEED POSTS -->
@@ -205,7 +212,7 @@
 
       <!-- Foto / Video Upload / Kamera -->
       <div class="form-group">
-        <label class="form-label">Foto / Schnappschuss hinzufügen (Optional)</label>
+        <label class="form-label">Foto / Schnappschuss hinzufügen (+10 Pkt statt +5 Pkt)</label>
         <div style="display: flex; gap: 8px; margin-bottom: 8px;">
           <button type="button" class="btn-game-camera" style="flex: 1; text-align: center; justify-content: center; cursor: pointer;" onclick="CameraModule.open({ title: '📸 Schnappschuss teilen', facingMode: 'environment', onCapture: (b64, isVid) => FeedModule.setCapturedPhoto(b64, isVid) })">
             📸 Live-Kamera
@@ -220,7 +227,7 @@
         <button id="btnRemoveSocialPhoto" class="btn-primary hidden" onclick="FeedModule.removeSocialPhotoPreview()" style="background: #475569; padding: 6px 10px; font-size: 11px; margin-top: 4px;">Medien entfernen</button>
       </div>
 
-      <button class="btn-primary" id="btnSubmitSocialPost">🚀 In den Feed posten (+10 Pkt)</button>
+      <button class="btn-primary" id="btnSubmitSocialPost">🚀 In den Feed posten (+5 Pkt)</button>
     </div>
   </div>
 
@@ -234,6 +241,22 @@
 
       <div id="parkGuideContent">
         <!-- Gefüllt per JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- 2b. 🗺️ INTERAKTIVE PARK-MAP MODAL (BETA) -->
+  <div id="parkMapModal" class="modal-overlay hidden" style="z-index: 480; padding: 6px 4px;">
+    <div class="modal-container" style="max-width: 520px; max-height: 94vh; overflow-y: auto; border: 3px solid var(--walibi-yellow); padding: 12px 10px;">
+      <div class="modal-header" style="margin-bottom: 8px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <h2 class="modal-title" style="color: var(--walibi-yellow); font-size: 20px;">🗺️ Walibi Park-Map</h2>
+          <span class="map-beta-pill">BETA</span>
+        </div>
+        <button class="btn-close-modal" id="closeParkMapModal">✕</button>
+      </div>
+      <div id="parkMapModalContainer">
+        <!-- Gefüllt per ParkMapModule.render('modal') -->
       </div>
     </div>
   </div>
@@ -514,6 +537,14 @@
         <textarea id="wildcardDescInput" class="form-textarea game-input" placeholder="Kurze Beschreibung, was du gemacht hast..."></textarea>
       </div>
 
+      <!-- 🟢🔴 ERGEBNIS-AUSWAHL (ERFOLG VS. MINUSPUNKTE / MALUS) -->
+      <div id="questOutcomeSection" class="hidden" style="margin-bottom: 12px; background: rgba(15, 23, 42, 0.8); padding: 10px 12px; border-radius: 12px; border: 2px solid var(--walibi-yellow);">
+        <label class="form-label" style="color: var(--walibi-yellow); font-size: 12px; margin-bottom: 6px;">🎯 Wie ist die Challenge ausgegangen?</label>
+        <div id="questOutcomeOptionsList" style="display: flex; flex-direction: column; gap: 6px;">
+          <!-- Dynamisch per JS generiert -->
+        </div>
+      </div>
+
       <!-- KOMMENTAR / ANMERKUNG ZUR AUFGABE -->
       <div class="form-group" style="margin-bottom: 10px;">
         <label class="form-label">📝 Dein Kommentar / Spruch (Optional):</label>
@@ -538,6 +569,33 @@
         <img id="photoUploadPreview" class="camera-preview-img hidden" alt="Beweisfoto Vorschau" />
         <video id="videoUploadPreview" class="camera-preview-video hidden" controls playsinline></video>
         <button id="btnRemovePhoto" class="btn-primary hidden" onclick="QuestsModule.removeCapturedPhoto()" style="background: #475569; padding: 6px 10px; font-size: 11px; margin-top: 4px;">Medien entfernen</button>
+      </div>
+
+      <!-- 👁️ ZEUGEN-AUSWAHL (WER HAT ES GESEHEN?) -->
+      <div id="questWitnessSection" style="margin-bottom: 12px; background: rgba(0,0,0,0.4); padding: 10px 12px; border-radius: 12px; border: 1.5px solid rgba(255,255,255,0.15);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <label class="form-label" style="margin-bottom: 0; color: #fff; font-size: 12px;">👁️ Zeugen benennen (Mitspieler):</label>
+          <span id="questWitnessReqBadge" style="font-size: 10px; font-weight: 800; color: var(--text-dim);">Optional</span>
+        </div>
+        <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">
+          Tippe auf Mitspieler, die deine Aktion mit eigenen Augen gesehen haben:
+        </div>
+        <div id="questWitnessList" style="display: flex; gap: 6px; flex-wrap: wrap;">
+          <!-- Dynamisch per JS mit Spieler-Chips gefüllt -->
+        </div>
+      </div>
+
+      <!-- 📜 "AUF GUT GLAUBEN" (-20% PUNKTEABZUG) -->
+      <div id="questFaithSection" style="margin-bottom: 12px; background: rgba(245, 158, 11, 0.1); border: 1.5px dashed #f59e0b; border-radius: 12px; padding: 10px 12px;">
+        <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
+          <input type="checkbox" id="questFaithCheckbox" style="width: 18px; height: 18px; margin-top: 2px; accent-color: #f59e0b; cursor: pointer;" onchange="QuestsModule.handleFaithToggle()" />
+          <div>
+            <div style="font-weight: 800; font-size: 12px; color: #f59e0b;">📜 Auf gut Glauben einreichen (Kein Foto/Video/Zeuge)</div>
+            <div style="font-size: 11px; color: var(--text-muted); line-height: 1.3; margin-top: 2px;">
+              ⚠️ <strong>-20% Ehren-Punkteabzug</strong> & Vermerk im Tour-Zeugnis '26!
+            </div>
+          </div>
+        </label>
       </div>
 
       <div id="modalVotingNote" class="voting-note-box hidden" style="margin-bottom: 10px; font-size: 11px; color: var(--walibi-yellow);"></div>
@@ -629,6 +687,14 @@
       </div>
 
       <div class="quick-menu-grid">
+        <button class="quick-menu-card" onclick="app.closeQuickMenu(); ParkMapModule.openModal();" style="border-color: var(--walibi-yellow); background: rgba(255,204,0,0.14);">
+          <span class="quick-menu-icon">🗺️</span>
+          <div class="quick-menu-text">
+            <span class="quick-menu-title" style="color: var(--walibi-yellow);">Park-Map (BETA)</span>
+            <span class="quick-menu-desc">Plattegrond 2026, Zonen, Gastronomie & Pins</span>
+          </div>
+        </button>
+
         <button class="quick-menu-card" onclick="app.closeQuickMenu(); ParkGuideModule.openModal();">
           <span class="quick-menu-icon">🎢</span>
           <div class="quick-menu-text">
@@ -768,22 +834,24 @@
   </div>
 
   <!-- JAVASCRIPT MODULES -->
-  <script src="js/audio.js"></script>
-  <script src="js/data/rulesData.js"></script>
-  <script src="js/data/mascotsData.js"></script>
-  <script src="js/data/partyQuotesData.js"></script>
-  <script src="js/data/attractionsData.js"></script>
-  <script src="js/data/questsData.js"></script>
-  <script src="js/camera.js"></script>
-  <script src="js/store.js"></script>
-  <script src="js/profile.js"></script>
-  <script src="js/parkGuide.js"></script>
-  <script src="js/quests.js"></script>
-  <script src="js/counter.js"></script>
-  <script src="js/feed.js"></script>
-  <script src="js/leaderboard.js"></script>
-  <script src="js/awards.js"></script>
-  <script src="js/app.js"></script>
+  <script src="js/audio.js?v=2026_v2"></script>
+  <script src="js/data/rulesData.js?v=2026_v2"></script>
+  <script src="js/data/mascotsData.js?v=2026_v2"></script>
+  <script src="js/data/partyQuotesData.js?v=2026_v2"></script>
+  <script src="js/data/attractionsData.js?v=2026_v2"></script>
+  <script src="js/data/questsData.js?v=2026_v2"></script>
+  <script src="js/data/parkMapData.js?v=2026_v2"></script>
+  <script src="js/camera.js?v=2026_v2"></script>
+  <script src="js/store.js?v=2026_v2"></script>
+  <script src="js/profile.js?v=2026_v2"></script>
+  <script src="js/parkMap.js?v=2026_v2"></script>
+  <script src="js/parkGuide.js?v=2026_v2"></script>
+  <script src="js/quests.js?v=2026_v2"></script>
+  <script src="js/counter.js?v=2026_v2"></script>
+  <script src="js/feed.js?v=2026_v2"></script>
+  <script src="js/leaderboard.js?v=2026_v2"></script>
+  <script src="js/awards.js?v=2026_v2"></script>
+  <script src="js/app.js?v=2026_v2"></script>
 
 </body>
 </html>

@@ -5,14 +5,95 @@
 const FeedModule = {
   currentPhotoModalUrl: null,
   capturedSocialPhotoBase64: null,
+  currentFilter: "all", // "all" | "my_posts" | "my_comments" | "to_vote" | "voted"
   commentDrafts: {},
+  commentPhotoDrafts: {},
 
   init() {
     this.setupSocialPostModal();
   },
 
+  setFilter(filterName) {
+    if (window.GameAudio) window.GameAudio.playClick();
+    this.currentFilter = filterName;
+
+    document.querySelectorAll(".feed-filter-btn").forEach(btn => {
+      btn.classList.toggle("active", btn.dataset.filter === filterName);
+    });
+
+    this.renderFeed();
+  },
+
+  async confirmAsWitness(feedItemId) {
+    if (!ProfileModule.requireUser()) return;
+    const currentUser = window.store.state.currentUser;
+    if (!currentUser) return;
+
+    if (window.GameAudio) window.GameAudio.playClick();
+    await window.store.confirmWitness(feedItemId, currentUser.id);
+    this.renderFeed();
+  },
+
   handleCommentInput(itemId, text) {
     this.commentDrafts[itemId] = text;
+  },
+
+  openCommentCamera(feedItemId) {
+    if (!ProfileModule.requireUser()) return;
+    if (window.CameraModule) {
+      window.CameraModule.open({
+        title: "📸 Foto-Antwort",
+        facingMode: "environment",
+        onCapture: (b64) => {
+          this.commentPhotoDrafts[feedItemId] = b64;
+          this.renderFeed();
+        }
+      });
+    }
+  },
+
+  handleCommentPhotoCapture(feedItemId, event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (window.GameAudio) window.GameAudio.playClick();
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        const maxDim = 800;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxDim) {
+            height *= maxDim / width;
+            width = maxDim;
+          }
+        } else {
+          if (height > maxDim) {
+            width *= maxDim / height;
+            height = maxDim;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressed = canvas.toDataURL("image/jpeg", 0.82);
+        this.commentPhotoDrafts[feedItemId] = compressed;
+        this.renderFeed();
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  },
+
+  removeCommentPhotoDraft(feedItemId) {
+    delete this.commentPhotoDrafts[feedItemId];
+    this.renderFeed();
   },
 
   setCapturedPhoto(base64, isVideo = false) {
@@ -20,6 +101,7 @@ const FeedModule = {
     const previewImg = document.getElementById("socialPhotoPreview");
     const previewVid = document.getElementById("socialVideoPreview");
     const removeBtn = document.getElementById("btnRemoveSocialPhoto");
+    const submitBtn = document.getElementById("btnSubmitSocialPost");
 
     if (isVideo) {
       if (previewImg) previewImg.classList.add("hidden");
@@ -35,6 +117,7 @@ const FeedModule = {
       }
     }
     if (removeBtn) removeBtn.classList.remove("hidden");
+    if (submitBtn) submitBtn.textContent = "🚀 Schnappschuss posten (+10 Pkt)";
   },
 
   setupSocialPostModal() {
@@ -53,6 +136,7 @@ const FeedModule = {
         const textInp = document.getElementById("socialPostTextInput");
         if (textInp) textInp.value = "";
         this.removeSocialPhotoPreview();
+        if (submitBtn) submitBtn.textContent = "🚀 In den Feed posten (+5 Pkt)";
         if (modal) modal.classList.remove("hidden");
       };
     }
@@ -84,6 +168,7 @@ const FeedModule = {
     const preview = document.getElementById("socialPhotoPreview");
     const videoPreview = document.getElementById("socialVideoPreview");
     const removeBtn = document.getElementById("btnRemoveSocialPhoto");
+    const submitBtn = document.getElementById("btnSubmitSocialPost");
     if (preview) {
       preview.classList.add("hidden");
       preview.src = "";
@@ -93,6 +178,7 @@ const FeedModule = {
       videoPreview.src = "";
     }
     if (removeBtn) removeBtn.classList.add("hidden");
+    if (submitBtn) submitBtn.textContent = "🚀 In den Feed posten (+5 Pkt)";
   },
 
   handleSocialPhotoCapture(event) {
@@ -186,10 +272,15 @@ const FeedModule = {
 
     if (window.GameAudio) window.GameAudio.playCoin();
 
+    const isPhoto = !!this.capturedSocialPhotoBase64;
     await window.store.createFreePost(currentUser.id, text, this.capturedSocialPhotoBase64);
 
     if (window.app && window.app.showToast) {
-      window.app.showToast(`📸 +10 Punkte für deinen Post / Schnappschuss!`);
+      if (isPhoto) {
+        window.app.showToast(`📸 +10 Punkte für deinen Schnappschuss!`);
+      } else {
+        window.app.showToast(`📝 +5 Punkte für deine Textnachricht!`);
+      }
     }
 
     this.renderFeed();
@@ -225,7 +316,7 @@ const FeedModule = {
         <div class="stat-card my-stat-card">
           <span class="stat-icon">⭐</span>
           <div class="stat-content">
-            <div class="stat-val" id="headerUserPoints">${(currentUser && currentUser.points) || 0} Pkt</div>
+            <div class="stat-val" id="statMyUserPoints">${(currentUser && currentUser.points) || 0} Pkt</div>
             <div class="stat-lbl" id="headerMyRank">Rang #${myRank > 0 ? myRank : 1}</div>
           </div>
         </div>
@@ -358,24 +449,78 @@ const FeedModule = {
       } catch (e) {}
     }
 
-    const feed = window.store.state.feed || [];
+    const rawFeed = window.store.state.feed || [];
+    // Einzelne Getränkebuchungen aus dem Feed filtern & strikt duplikatfrei halten
+    const seenMap = new Set();
+    const feed = [];
+    rawFeed.forEach(item => {
+      if (!item || item.type === "drink") return;
+      const key = item.type === "achievement"
+        ? `achieve_${item.userId}_${item.achievementId}`
+        : item.id;
+      if (!seenMap.has(key)) {
+        seenMap.add(key);
+        feed.push(item);
+      }
+    });
+
     const currentUser = window.store.state.currentUser;
     const myId = currentUser ? currentUser.id : null;
 
-    if (feed.length === 0) {
+    // Filter Buttons Zustand synchronisieren
+    document.querySelectorAll(".feed-filter-btn").forEach(btn => {
+      btn.classList.toggle("active", btn.dataset.filter === this.currentFilter);
+    });
+
+    // Filter anwenden
+    let filteredFeed = feed;
+    if (this.currentFilter === "my_posts") {
+      filteredFeed = feed.filter(item => myId && item.userId === myId);
+    } else if (this.currentFilter === "my_comments") {
+      filteredFeed = feed.filter(item => myId && Array.isArray(item.comments) && item.comments.some(c => c.userId === myId));
+    } else if (this.currentFilter === "to_vote") {
+      filteredFeed = feed.filter(item => item.type === "quest" && item.requiresVoting && !item.votingCompleted && item.userId !== myId && (!item.votes || item.votes[myId] === undefined));
+    } else if (this.currentFilter === "voted") {
+      filteredFeed = feed.filter(item => item.requiresVoting && item.votes && myId && item.votes[myId] !== undefined);
+    }
+
+    if (filteredFeed.length === 0) {
+      let emptyIcon = "📸";
+      let emptyTitle = "Noch keine Quest-Aktivitäten";
+      let emptyDesc = "Teile einen Schnappschuss oder meistere deine erste Challenge!";
+
+      if (this.currentFilter === "my_posts") {
+        emptyIcon = "👤";
+        emptyTitle = "Keine eigenen Posts";
+        emptyDesc = "Du hast noch keine eigenen Posts oder Quests geteilt. Tippe oben auf 'Schnappschuss / Status posten'!";
+      } else if (this.currentFilter === "my_comments") {
+        emptyIcon = "💬";
+        emptyTitle = "Keine Kommentare";
+        emptyDesc = "Du hast bisher noch keine Beiträge oder Fotos kommentiert.";
+      } else if (this.currentFilter === "to_vote") {
+        emptyIcon = "🎉";
+        emptyTitle = "Alles bewertet!";
+        emptyDesc = "Es gibt aktuell keine offenen Aufgaben deiner Freunde, die auf deine Bewertung warten.";
+      } else if (this.currentFilter === "voted") {
+        emptyIcon = "⭐";
+        emptyTitle = "Noch keine Votes abgegeben";
+        emptyDesc = "Du hast bisher noch keine Challenges deiner Freunde bewertet.";
+      }
+
       container.innerHTML = `
-        <div class="empty-feed-card" style="text-align: center; padding: 24px; color: var(--text-muted);">
-          <div style="font-size: 40px; margin-bottom: 8px;">📸</div>
-          <h3>Noch keine Aktivitäten</h3>
-          <p>Teile einen Schnappschuss oder meistere deine erste Challenge!</p>
+        <div class="empty-feed-card" style="text-align: center; padding: 28px 16px; color: var(--text-muted); background: var(--game-panel-bg); border-radius: var(--radius-lg); border: 2px dashed rgba(255,255,255,0.15); margin-top: 6px;">
+          <div style="font-size: 40px; margin-bottom: 8px;">${emptyIcon}</div>
+          <h3 style="color: #fff; font-size: 17px; margin-bottom: 6px;">${emptyTitle}</h3>
+          <p style="font-size: 13px; max-width: 320px; margin: 0 auto; line-height: 1.4;">${emptyDesc}</p>
         </div>
       `;
       return;
     }
 
-    container.innerHTML = feed.map(item => {
+    container.innerHTML = filteredFeed.map(item => {
       const isQuest = item.type === "quest";
       const isSocial = item.type === "social";
+      const isAchievement = item.type === "achievement";
       const timeStr = this.formatRelativeTime(item.timestamp);
       const isMyPost = item.userId === myId;
 
@@ -386,7 +531,7 @@ const FeedModule = {
         const hasReacted = myId && userList.includes(myId);
         const count = userList.length;
         return `
-          <button class="reaction-pill ${hasReacted ? 'active' : ''}" onclick="FeedModule.toggleReaction('${item.id}', '${emo}')">
+          <button class="reaction-pill ${hasReacted ? 'active' : ''}" onclick="FeedModule.toggleReaction('${item.id}', '${emo}')" title="${emo} Reaktion (+5 Pkt für ${item.userName})">
             ${emo} ${count > 0 ? `<span class="reaction-count">${count}</span>` : ''}
           </button>
         `;
@@ -401,6 +546,8 @@ const FeedModule = {
       // Kommentare HTML & Gespeicherter Draft
       const comments = item.comments || [];
       const draftText = this.commentDrafts[item.id] || "";
+      const draftPhoto = this.commentPhotoDrafts[item.id] || null;
+
       const commentsHtml = `
         <div class="comments-section" id="comments_${item.id}">
           <div class="comments-list">
@@ -408,37 +555,107 @@ const FeedModule = {
               <div class="comment-item">
                 <img src="${c.userAvatar || ProfileModule.generateDefaultAvatar(c.userName)}" class="comment-avatar" />
                 <div class="comment-bubble">
-                  <div class="comment-author">${c.userName}</div>
-                  <div class="comment-text">${this.escapeHtml(c.text)}</div>
+                  <div class="comment-author">${c.userName} ${c.photo ? '<span style="color:var(--walibi-yellow); font-size:10px; font-weight:800;">(+5 Pkt)</span>' : '<span style="color:var(--text-dim); font-size:10px;">(+2 Pkt)</span>'}</div>
+                  ${c.text ? `<div class="comment-text">${this.escapeHtml(c.text)}</div>` : ''}
+                  ${c.photo ? `
+                    <div class="comment-photo-wrap" onclick="FeedModule.openPhotoModal('${c.photo}')" title="Foto vergrößern">
+                      <img src="${c.photo}" class="comment-inline-photo" loading="lazy" alt="Kommentar Foto" />
+                    </div>
+                  ` : ''}
                   <div class="comment-time">${this.formatRelativeTime(c.timestamp)}</div>
                 </div>
               </div>
             `).join("")}
           </div>
 
+          ${draftPhoto ? `
+            <div class="comment-photo-preview-wrap">
+              <img src="${draftPhoto}" class="comment-draft-thumb" alt="Foto-Antwort Vorschau" />
+              <button type="button" class="btn-remove-comment-photo" onclick="FeedModule.removeCommentPhotoDraft('${item.id}')" title="Foto entfernen">✕</button>
+            </div>
+          ` : ''}
+
           <div class="comment-input-row">
             <img src="${(currentUser && currentUser.avatar) || ProfileModule.generateDefaultAvatar(currentUser ? currentUser.name : 'X')}" class="mini-input-avatar" />
-            <input type="text" id="input_comment_${item.id}" value="${this.escapeHtml(draftText)}" placeholder="Schreib einen Kommentar..." class="comment-input" oninput="FeedModule.handleCommentInput('${item.id}', this.value)" onkeydown="if(event.key==='Enter') FeedModule.submitComment('${item.id}')" />
-            <button class="btn-send-comment" onclick="FeedModule.submitComment('${item.id}')">💬 Senden</button>
+            <input type="text" id="input_comment_${item.id}" value="${this.escapeHtml(draftText)}" placeholder="Kommentar schreiben (+2 Pkt)..." class="comment-input" oninput="FeedModule.handleCommentInput('${item.id}', this.value)" onkeydown="if(event.key==='Enter') FeedModule.submitComment('${item.id}')" />
+            <button type="button" class="btn-comment-media" onclick="FeedModule.openCommentCamera('${item.id}')" title="Foto-Antwort per Kamera (+5 Pkt)">📸</button>
+            <label class="btn-comment-media" title="Foto-Antwort aus Galerie (+5 Pkt)">
+              🖼️
+              <input type="file" accept="image/*" style="display:none;" onchange="FeedModule.handleCommentPhotoCapture('${item.id}', event)" />
+            </label>
+            <button type="button" class="btn-send-comment" onclick="FeedModule.submitComment('${item.id}')">${draftPhoto ? '📸 Senden (+5 Pkt)' : '💬 Senden (+2 Pkt)'}</button>
           </div>
         </div>
       `;
 
+      // Zeugen-Status Banner
+      let witnessBannerHtml = "";
+      if (Array.isArray(item.witnesses) && item.witnesses.length > 0) {
+        const myWitnessEntry = myId ? item.witnesses.find(w => w.userId === myId) : null;
+        const canConfirm = myWitnessEntry && !myWitnessEntry.confirmed;
+        const anyConfirmed = item.witnesses.some(w => w.confirmed);
+
+        witnessBannerHtml = `
+          <div class="feed-witness-banner ${anyConfirmed ? 'confirmed' : ''}">
+            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+              <span style="font-size: 13px;">👁️</span>
+              <span style="font-size: 11px; font-weight: 800; color: #93c5fd;">Zeugen:</span>
+              ${item.witnesses.map(w => `
+                <span style="font-size: 11px; font-weight: 700; color: ${w.confirmed ? '#34d399' : '#f59e0b'};">
+                  ${w.userName} ${w.confirmed ? '✅' : '⏳'}
+                </span>
+              `).join(" • ")}
+            </div>
+            ${canConfirm ? `
+              <button class="btn-confirm-witness" onclick="FeedModule.confirmAsWitness('${item.id}')">
+                ✅ Als Zeuge bestätigen ("Ich war dabei!")
+              </button>
+            ` : ''}
+          </div>
+        `;
+      }
+
+      let pointsBadgeHtml = "";
+      if (item.points !== undefined && item.points !== null) {
+        if (item.points < 0) {
+          pointsBadgeHtml = `<div class="feed-points-badge penalty">${item.points} Pkt</div>`;
+        } else {
+          pointsBadgeHtml = `<div class="feed-points-badge">+${item.actualPointsAwarded !== undefined ? item.actualPointsAwarded : item.points} Pkt</div>`;
+        }
+      }
+
+      const faithBadgeHtml = item.isFaithBased ? `
+        <div class="feed-faith-badge">📜 Auf gut Glauben (-20% Ehren-Abzug)</div>
+      ` : "";
+
       return `
-        <div class="feed-card" id="post_${item.id}">
+        <div class="feed-card ${isAchievement ? 'feed-card-achievement' : ''}" id="post_${item.id}">
           <div class="feed-header">
             <img src="${item.userAvatar || ProfileModule.generateDefaultAvatar(item.userName)}" class="feed-avatar" />
             <div class="feed-user-meta">
               <div class="feed-user-name">${item.userName} <span class="feed-house-tag">${item.userHouse || 'Haus'}</span></div>
               <div class="feed-timestamp">${timeStr}</div>
             </div>
-            ${item.points ? `<div class="feed-points-badge">+${item.actualPointsAwarded || item.points} Pkt</div>` : ''}
+            ${pointsBadgeHtml}
           </div>
 
           <div class="feed-content">
-            ${isQuest ? `
+            ${isAchievement ? `
+              <div class="feed-achievement-banner">
+                <div class="achievement-trophy-glow">
+                  <span class="achievement-big-icon">${item.achievementIcon || '🏆'}</span>
+                </div>
+                <div class="achievement-details">
+                  <div class="achievement-super-tag">🏆 MEILENSTEIN FREIGESCHALTET!</div>
+                  <div class="achievement-title-text">${item.achievementTitle}</div>
+                  <div class="achievement-desc-text">${this.escapeHtml(item.achievementDesc || '')}</div>
+                </div>
+              </div>
+            ` : isQuest ? `
               <div class="feed-quest-title">${item.questIcon || '🎯'} ${item.questTitle}</div>
               <div class="feed-quest-desc">${item.questDescription}</div>
+              ${faithBadgeHtml}
+              ${witnessBannerHtml}
               ${item.userComment ? `
                 <div class="feed-user-comment-box" style="background: rgba(255,204,0,0.1); border-left: 3px solid var(--walibi-yellow); padding: 6px 10px; border-radius: 6px; margin-bottom: 8px; font-size: 13px; font-style: italic;">
                   💬 "${this.escapeHtml(item.userComment)}"
@@ -513,15 +730,15 @@ const FeedModule = {
     const eligibleCount = Math.max(1, players.length - 1);
     const votes = item.votes || {};
     const voteCount = Object.keys(votes).length;
-    const isCompleted = item.votingCompleted;
+    const isCompleted = !!(item.votingCompleted || item.votingUnlocked);
     const requiredVotes = Math.max(1, Math.ceil(eligibleCount * 0.6));
     const progressPercent = Math.min(100, Math.round((voteCount / requiredVotes) * 100));
 
     let sum = 0;
-    Object.values(votes).forEach(val => sum += val);
+    Object.values(votes).forEach(val => sum += Number(val));
     const avgRating = voteCount > 0 ? (sum / voteCount).toFixed(1) : 0;
 
-    const myVote = myId ? votes[myId] : null;
+    const myVote = (myId && votes[myId] !== undefined) ? Number(votes[myId]) : null;
     const isOwner = item.userId === myId;
 
     return `
@@ -544,17 +761,17 @@ const FeedModule = {
 
         ${!isOwner ? `
           <div class="voting-stars-row">
-            <span class="vote-prompt">${myVote ? 'Deine Stimme:' : 'Bewerte die Aktion:'}</span>
+            <span class="vote-prompt">${myVote ? `Deine Stimme: ${myVote} ⭐` : 'Bewerte die Aktion:'}</span>
             <div class="stars-buttons">
               ${[1, 2, 3, 4, 5].map(star => `
-                <button class="star-btn ${myVote === star ? 'selected' : ''}" onclick="FeedModule.castVote('${item.id}', ${star})">
+                <button type="button" class="star-btn ${myVote === star ? 'selected' : ''}" onclick="FeedModule.castVote('${item.id}', ${star})" title="${star} von 5 Sternen vergeben">
                   ${star} ⭐
                 </button>
               `).join("")}
             </div>
           </div>
         ` : `
-          <div class="voting-own-hint">👥 Deine Freunde stimmen gerade über deinen Post ab!</div>
+          <div class="voting-own-hint">👥 Deine Freunde stimmen gerade über deinen Post ab! (${voteCount}/${requiredVotes} Stimmen)</div>
         `}
       </div>
     `;
@@ -563,18 +780,20 @@ const FeedModule = {
   async toggleReaction(feedItemId, emoji) {
     if (!ProfileModule.requireUser()) return;
     const currentUser = window.store.state.currentUser;
+    if (!currentUser) return;
 
     if (window.GameAudio) window.GameAudio.playClick();
-    await window.store.toggleReaction(feedItemId, emoji, currentUser.id);
+    await window.store.toggleReaction(feedItemId, currentUser.id, emoji);
     this.renderFeed();
   },
 
   async castVote(feedItemId, rating) {
     if (!ProfileModule.requireUser()) return;
     const currentUser = window.store.state.currentUser;
+    if (!currentUser) return;
 
     if (window.GameAudio) window.GameAudio.playCoin();
-    await window.store.voteFeedItem(feedItemId, currentUser.id, rating);
+    await window.store.castVote(feedItemId, currentUser.id, Number(rating));
     this.renderFeed();
   },
 
@@ -582,15 +801,16 @@ const FeedModule = {
     if (!ProfileModule.requireUser()) return;
     const currentUser = window.store.state.currentUser;
     const input = document.getElementById(`input_comment_${feedItemId}`);
-    if (!input) return;
+    const text = input ? input.value.trim() : (this.commentDrafts[feedItemId] || "");
+    const photoBase64 = this.commentPhotoDrafts[feedItemId] || null;
 
-    const text = input.value.trim();
-    if (!text) return;
+    if (!text && !photoBase64) return;
 
     if (window.GameAudio) window.GameAudio.playClick();
-    await window.store.addComment(feedItemId, currentUser.id, text);
+    await window.store.addComment(feedItemId, currentUser.id, text, photoBase64);
     delete this.commentDrafts[feedItemId];
-    input.value = "";
+    delete this.commentPhotoDrafts[feedItemId];
+    if (input) input.value = "";
     this.renderFeed();
   },
 

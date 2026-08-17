@@ -188,6 +188,7 @@ const ProfileModule = {
             p.points = 0;
             p.drinksCount = 0;
             p.completedQuests = [];
+            p.completedSideQuests = [];
             p.rideCounts = {};
             p.drinksDetail = { beer: 0, shot: 0, longdrink: 0, joint: 0, water: 0 };
           });
@@ -195,6 +196,7 @@ const ProfileModule = {
             window.store.state.currentUser.points = 0;
             window.store.state.currentUser.drinksCount = 0;
             window.store.state.currentUser.completedQuests = [];
+            window.store.state.currentUser.completedSideQuests = [];
             window.store.state.currentUser.rideCounts = {};
             window.store.state.currentUser.drinksDetail = { beer: 0, shot: 0, longdrink: 0, joint: 0, water: 0 };
           }
@@ -208,8 +210,9 @@ const ProfileModule = {
         if (window.GameAudio) window.GameAudio.playReward();
         this.updateHeaderProfile();
         if (window.app) window.app.renderAllViews();
+        if (window.ParkGuideModule) window.ParkGuideModule.render();
         if (window.app && window.app.showToast) {
-          window.app.showToast(`💥 ALLES AUF NULL GESETZT! Bereit für den Tour-Start!`);
+          window.app.showToast(`💥 ALLES AUF NULL GESETZT! Nebenquests, Quests & Punkte zurückgesetzt!`);
         }
       }
     } catch (e) {
@@ -709,6 +712,7 @@ const ProfileModule = {
     const user = window.store ? window.store.state.currentUser : null;
     const nameEl = document.getElementById("headerUserName");
     const pointsEl = document.getElementById("headerUserPoints");
+    const statPointsEl = document.getElementById("statMyUserPoints");
     const avatarEl = document.getElementById("headerUserAvatar");
     const adminBtn = document.getElementById("btnAdminPanel");
     const menuAdminBtn = document.getElementById("menuAdminBtn");
@@ -725,11 +729,13 @@ const ProfileModule = {
     if (!user) {
       if (nameEl) nameEl.textContent = "Gast";
       if (pointsEl) pointsEl.textContent = "0 Pkt";
+      if (statPointsEl) statPointsEl.textContent = "0 Pkt";
       return;
     }
 
     if (nameEl) nameEl.textContent = user.name;
     if (pointsEl) pointsEl.textContent = `${user.points || 0} Pkt`;
+    if (statPointsEl) statPointsEl.textContent = `${user.points || 0} Pkt`;
     if (avatarEl) avatarEl.src = user.avatar || this.generateDefaultAvatar(user.name);
   },
 

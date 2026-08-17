@@ -78,6 +78,7 @@ const LeaderboardModule = {
       if (isMe) cardClass += " rank-me";
 
       const completedQuestsCount = (player.completedQuests || []).length;
+      const completedSideQuestsCount = (player.completedSideQuests || []).length;
       const drinksCount = player.drinksCount || 0;
 
       return `
@@ -95,7 +96,7 @@ const LeaderboardModule = {
             </div>
             <div class="rank-sub-meta">
               <span class="rank-house-badge">${player.house || 'Haus'}</span>
-              <span class="rank-stats-mini">🎯 ${completedQuestsCount} Quests • 🍺 ${drinksCount} Drinks</span>
+              <span class="rank-stats-mini">🎯 ${completedQuestsCount} Quests • ${completedSideQuestsCount > 0 ? `🏅 ${completedSideQuestsCount} Orden • ` : ''}🍺 ${drinksCount} Drinks</span>
             </div>
           </div>
 
@@ -179,26 +180,81 @@ const LeaderboardModule = {
       </div>
     `;
 
-    const questsList = document.getElementById("modalPlayerQuestsList");
+    // Nebenquests des Spielers
+    const allSideQuests = window.SIDE_QUESTS || [];
+    const playerSideQuestIds = player.completedSideQuests || [];
+    const playerSideQuests = allSideQuests.filter(sq => playerSideQuestIds.includes(sq.id));
+    const sideQuestPoints = playerSideQuests.reduce((sum, s) => sum + (s.points || 0), 0);
+
+    let sideQuestsHtml = "";
+    if (playerSideQuests.length > 0) {
+      sideQuestsHtml = `
+        <div style="margin-bottom: 12px; padding: 10px; background: rgba(0, 0, 0, 0.35); border: 2px solid rgba(255, 204, 0, 0.4); border-radius: var(--radius-md);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-size: 11px; font-weight: 900; color: var(--walibi-yellow); text-transform: uppercase;">🏅 Nebenquest-Orden (${playerSideQuests.length}/${allSideQuests.length}):</span>
+            <span class="points-badge" style="font-size: 10px;">+${sideQuestPoints} Pkt</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            ${playerSideQuests.map(sq => `
+              <div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(0, 0, 0, 0.5)); border: 1.5px solid #10b981; border-radius: 8px; padding: 6px 10px; display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 16px;">🏆</span>
+                  <div>
+                    <div style="font-size: 12px; font-weight: 900; color: #fff;">${sq.title}</div>
+                    <div style="font-size: 10px; color: #94a3b8;">${sq.desc}</div>
+                  </div>
+                </div>
+                <span style="font-size: 11px; font-weight: 900; color: #34d399; white-space: nowrap;">+${sq.points} P</span>
+              </div>
+            `).join("")}
+          </div>
+        </div>
+      `;
+    }
+
+    // Haupt-Challenges des Spielers
     const completedIds = player.completedQuests || [];
     const allQuests = window.store.state.quests || [];
     const myQuests = allQuests.filter(q => completedIds.includes(q.id));
+    const mainQuestPoints = myQuests.reduce((sum, q) => sum + (q.points || 0), 0);
 
-    let questRows = "";
-    if (myQuests.length === 0) {
-      questRows = `<p class="text-muted">Noch keine Quests abgeschlossen.</p>`;
-    } else {
-      questRows = myQuests.map(q => `
-        <div class="player-quest-row" style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.04); padding: 6px 10px; border-radius: 8px;">
-          <span style="font-size: 13px; font-weight: 700;">${q.icon || '🎯'} ${q.title}</span>
-          <span class="points-badge" style="font-size: 10px;">+${q.points} Pkt</span>
+    let mainQuestsHtml = "";
+    if (myQuests.length > 0) {
+      mainQuestsHtml = `
+        <div style="margin-bottom: 12px; padding: 10px; background: rgba(0, 0, 0, 0.35); border: 2px solid rgba(225, 29, 72, 0.45); border-radius: var(--radius-md);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-size: 11px; font-weight: 900; color: #fda4af; text-transform: uppercase;">🎯 Gemeisterte Haupt-Challenges (${myQuests.length}/${allQuests.length}):</span>
+            <span class="points-badge" style="font-size: 10px; background: var(--gradient-rose); color: #fff;">+${mainQuestPoints} Pkt</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            ${myQuests.map(q => `
+              <div style="background: linear-gradient(135deg, rgba(225, 29, 72, 0.22), rgba(0, 0, 0, 0.5)); border: 1.5px solid #e11d48; border-radius: 8px; padding: 6px 10px; display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 16px;">${q.icon || '🎯'}</span>
+                  <div>
+                    <div style="font-size: 12px; font-weight: 900; color: #fff;">${q.title}</div>
+                    <div style="font-size: 10px; color: #cbd5e1;">${q.description || q.desc || ''}</div>
+                  </div>
+                </div>
+                <span style="font-size: 11px; font-weight: 900; color: #fb7185; white-space: nowrap;">+${q.points} P</span>
+              </div>
+            `).join("")}
+          </div>
         </div>
-      `).join("");
+      `;
+    } else {
+      mainQuestsHtml = `
+        <div style="margin-bottom: 12px; padding: 10px; background: rgba(255,255,255,0.03); border-radius: var(--radius-md); text-align: center; font-size: 12px; color: var(--text-dim);">
+          Noch keine Haupt-Challenges eingereicht.
+        </div>
+      `;
     }
 
-    questsList.innerHTML = drinksHtml + `
-      <div style="font-size: 12px; font-weight: 800; color: var(--comic-pink); margin: 8px 0 4px; text-transform: uppercase;">🎯 Abgeschlossene Quests:</div>
-      ${questRows}
+    const questsList = document.getElementById("modalPlayerQuestsList");
+    questsList.innerHTML = drinksHtml + mainQuestsHtml + sideQuestsHtml + `
+      <button type="button" class="btn-primary" style="margin-top: 10px; font-size: 13px; font-weight: 900; background: var(--gradient-gold); color: #000;" onclick="LeaderboardModule.openFullCertificate('${player.id}')">
+        📜 VOLLSTÄNDIGES ZEUGNIS ÖFFNEN
+      </button>
     `;
 
     modal.classList.remove("hidden");
@@ -206,6 +262,14 @@ const LeaderboardModule = {
     const closeBtn = document.getElementById("closePlayerDetailModal");
     if (closeBtn) {
       closeBtn.onclick = () => modal.classList.add("hidden");
+    }
+  },
+
+  openFullCertificate(playerId) {
+    const modal = document.getElementById("playerDetailModal");
+    if (modal) modal.classList.add("hidden");
+    if (window.AwardsModule) {
+      window.AwardsModule.openCelebrationModal(false, playerId);
     }
   }
 };

@@ -1,6 +1,6 @@
 /**
  * WALIBI HOLLAND ATTRAKTIONEN- & COASTER-GUIDE
- * Bis zum KI-Reset nutzen die Bahnen das atmosphärische Walibi Graphic-Novel Festival-Artwork.
+ * Vollständiges Verzeichnis aller Attraktionen inkl. Neuheiten und Kinderfahrgeschäften.
  * Untamed, Goliath & Lost Gravity nutzen ihre exklusiven Meisterwerk-Artworks.
  */
 
@@ -199,7 +199,7 @@ window.WALIBI_ATTRACTIONS = [
     desc: "Zwei flotte Runden mit dem bunten Drachenzug – perfekt zum Vorglühen und Punkte-Sammeln!"
   },
 
-  // --- 3. DIE WASSERBAHNEN ---
+  // --- 3. DIE WASSERBAHNEN & WASSER-ACTION ---
   {
     id: "attr_crazy_river",
     name: "Crazy River",
@@ -238,6 +238,25 @@ window.WALIBI_ATTRACTIONS = [
     illustration: "assets/attr_el_rio_grande.jpg",
     desc: "Runde 6er-Boote im reißenden Gebirgsfluss. Wer auf der falschen Seite sitzt, wird klatschnass!"
   },
+  {
+    id: "attr_splash_battle",
+    name: "Splash Battle",
+    type: "Interaktive Wasser-Schlacht",
+    manufacturer: "Preston & Barbieri",
+    opened: 2005,
+    history: "Die weltweit erste Splash Battle Attraktion! Boote auf Schienen im Wasserkanal mit drehbaren Handkurbel-Wasserkanonen.",
+    speed: "Gemächlich",
+    height: "Wasserbecken",
+    length: "Wasserparcours",
+    inversions: 0,
+    gForce: "1.0 G",
+    duration: "3:30 Min",
+    capacity: "550 Pers / Std",
+    minHeight: "90 cm",
+    badge: "Wasserkanonen-Schlacht",
+    illustration: "assets/walibi_festival_poster_bg.jpg",
+    desc: "Ausgestattet mit kraftvollen Wasserkanonen lieferst du dir eine erbitterte Wasserschlacht mit anderen Booten und Passanten am Ufer!"
+  },
 
   // --- 4. THRILL & FLAT RIDES ---
   {
@@ -258,6 +277,25 @@ window.WALIBI_ATTRACTIONS = [
     badge: "60m Katapult",
     illustration: "assets/attr_space_shot.jpg",
     desc: "Explosiver Raketenstart senkrecht nach oben mit fantastischem Rundumblick über Flevoland!"
+  },
+  {
+    id: "attr_space_kidz",
+    name: "Space Kidz",
+    type: "Kinder-Freifallturm",
+    manufacturer: "Zamperla",
+    opened: 2000,
+    history: "Der kultige Mini-Freifallturm in der Speed Zone für die Kleinen – und für epische Sauftour-Challenges!",
+    speed: "Hüpfend",
+    height: "7.0 m",
+    length: "Vertikal",
+    inversions: 0,
+    gForce: "1.5 G",
+    duration: "1:30 Min",
+    capacity: "300 Pers / Std",
+    minHeight: "90 cm",
+    badge: "Mini-Astronaut (100 Pkt)",
+    illustration: "assets/walibi_festival_poster_bg.jpg",
+    desc: "Sanfter Hüpf- und Freifallturm! 5 Fahrten bringen dir sagenhafte 100 Punkte im Zeugnis!"
   },
   {
     id: "attr_blast",
@@ -486,57 +524,331 @@ window.WALIBI_ATTRACTIONS = [
     badge: "Crash-Arena",
     illustration: "assets/walibi_comic_bg.jpg",
     desc: "Volle Fahrt voraus! Wer rammt wen zuerst von der Strecke?"
+  },
+  {
+    id: "attr_los_sombreros",
+    name: "Los Sombreros",
+    type: "Mexiko-Hüte Karussell",
+    manufacturer: "Soriani & Moser",
+    opened: 1994,
+    history: "Klassisches Dreh- und Schaukelkarussell im mexikanischen Themenbereich Exotic.",
+    speed: "30 km/h",
+    height: "5.0 m",
+    length: "Rundlauf",
+    inversions: 0,
+    gForce: "2.0 G",
+    duration: "2:00 Min",
+    capacity: "600 Pers / Std",
+    minHeight: "100 cm",
+    badge: "Exotic Dance",
+    illustration: "assets/walibi_festival_poster_bg.jpg",
+    desc: "Drehende und schwingende mexikanische Riesen-Sombreros mit fetziger Latin-Musik."
+  },
+  {
+    id: "attr_tour_des_jardins",
+    name: "Le Tour des Jardins",
+    type: "Oldtimer-Rundfahrt",
+    manufacturer: "Mack Rides",
+    opened: 2000,
+    history: "Idyllische Oldtimer-Fahrt durch blühende französische Gartenanlagen.",
+    speed: "Gemächlich",
+    height: "Boden",
+    length: "350 m",
+    inversions: 0,
+    gForce: "1.0 G",
+    duration: "3:00 Min",
+    capacity: "500 Pers / Std",
+    minHeight: "Ohne",
+    badge: "Chillen & Cruisen",
+    illustration: "assets/walibi_festival_poster_bg.jpg",
+    desc: "Gemütliche Oldtimer-Rundfahrt zum Entspannen und Pegel-Halten zwischen den Coastern."
+  },
+  {
+    id: "attr_merrie_goround",
+    name: "Merrie Go'Round",
+    type: "Historisches Pferdekarussell",
+    manufacturer: "SBF Visa",
+    opened: 1992,
+    history: "Traditionelles zweistöckiges Pferdekarussell im Play Ground.",
+    speed: "Gemächlich",
+    height: "6.0 m",
+    length: "Rundlauf",
+    inversions: 0,
+    gForce: "1.0 G",
+    duration: "2:30 Min",
+    capacity: "700 Pers / Std",
+    minHeight: "Ohne",
+    badge: "Klassiker",
+    illustration: "assets/walibi_festival_poster_bg.jpg",
+    desc: "Wunderschönes traditionelles Karussell mit handgeschnitzten Pferden und Kutschen."
+  },
+  {
+    id: "attr_walibi_express",
+    name: "Walibi Express",
+    type: "Park-Eisenbahn",
+    manufacturer: "Chance Rides",
+    opened: 1994,
+    history: "Die legendäre Parkeisenbahn mit Stationen in Main Street, Zero Zone und Play Ground.",
+    speed: "15 km/h",
+    height: "Boden",
+    length: "1.800 m",
+    inversions: 0,
+    gForce: "1.0 G",
+    duration: "8:00 Min",
+    capacity: "900 Pers / Std",
+    minHeight: "Ohne",
+    badge: "Panorama-Express",
+    illustration: "assets/walibi_festival_poster_bg.jpg",
+    desc: "Gemütliche Rundfahrt durch den gesamten Park mit Panoramablick auf alle Großattraktionen!"
   }
 ];
 
-// NEBENQUESTS & ACHIEVEMENTS
+// NEBENQUESTS & ACHIEVEMENTS (MEILENSTEINE)
 window.SIDE_QUESTS = [
+  // =========================================================================
+  // 1. ACHTERBAHN-MARATHONS (BELIEBIGE ACHTERBAHNEN: 5, 10, 15, 20 FAHRTEN)
+  // =========================================================================
   {
     id: "side_coaster_marathon_5",
-    title: "Coaster-Junkie (5 Fahrten)",
+    title: "Coaster-Junkie (5 Fahrten) 🎢",
     desc: "Fahre mindestens 5 Achterbahnen an diesem Tag.",
-    points: 25
+    points: 25,
+    icon: "🎢"
   },
   {
     id: "side_coaster_marathon_10",
-    title: "Iron Butt Marathon (10 Fahrten)",
+    title: "Iron Butt Marathon (10 Fahrten) 🔥",
     desc: "Fahre insgesamt 10 beliebige Achterbahnen an diesem Tag.",
-    points: 50
+    points: 50,
+    icon: "🔥"
   },
   {
+    id: "side_coaster_marathon_15",
+    title: "Achterbahn-Extremist (15 Fahrten) 🚀",
+    desc: "Fahre 15 beliebige Achterbahnen an diesem Tag – reiner Schienen-Rausch!",
+    points: 75,
+    icon: "🚀"
+  },
+  {
+    id: "side_coaster_marathon_20",
+    title: "Looping-Legende & Schienen-Gott (20 Fahrten) 👑",
+    desc: "Fahre sagenhafte 20 Achterbahnen an einem einzigen Tag!",
+    points: 100,
+    icon: "👑"
+  },
+
+  // =========================================================================
+  // 2. 3x FAHRTEN EINZEL-ATTRAKTIONEN (ALLE GROSSEN HIGHLIGHTS)
+  // =========================================================================
+  {
     id: "side_untamed_master",
-    title: "Untamed Dreifach-Dröhnung (3x)",
+    title: "Untamed Dreifach-Dröhnung (3x) 🪵",
     desc: "Fahre Untamed mindestens 3x an einem Tag!",
-    points: 40
+    points: 40,
+    icon: "🪵"
   },
   {
     id: "side_goliath_king",
-    title: "Goliath Mega-Master (3x)",
+    title: "Goliath Mega-Master (3x) 🎢",
     desc: "Fahre Goliath mindestens 3x an einem Tag!",
-    points: 40
+    points: 40,
+    icon: "🎢"
   },
   {
+    id: "side_condor_3",
+    title: "Condor Hänge-Härtetest (3x) 🦅",
+    desc: "Fahre die Hängeachterbahn Condor mindestens 3x an einem Tag!",
+    points: 40,
+    icon: "🦅"
+  },
+  {
+    id: "side_lost_gravity_3",
+    title: "Lost Gravity Schwerelos-Meister (3x) 🌀",
+    desc: "Fahre Lost Gravity mindestens 3x an einem Tag!",
+    points: 40,
+    icon: "🌀"
+  },
+  {
+    id: "side_xpress_3",
+    title: "Platform 13 Katapult-Sucht (3x) 🚇",
+    desc: "Fahre Xpress: Platform 13 mindestens 3x an einem Tag!",
+    points: 40,
+    icon: "🚇"
+  },
+  {
+    id: "side_eat_my_dust_3",
+    title: "Eat My Dust Quad-Racer (3x) 🏎️",
+    desc: "Fahre die Offroad-Achterbahn Eat my Dust mindestens 3x an einem Tag!",
+    points: 35,
+    icon: "🏎️"
+  },
+  {
+    id: "side_yoy_chill_3",
+    title: "YOY Chill Flow-Master (3x) 🟢",
+    desc: "Fahre die grüne Chill-Spur von YOY mindestens 3x an einem Tag!",
+    points: 40,
+    icon: "🟢"
+  },
+  {
+    id: "side_yoy_thrill_3",
+    title: "YOY Thrill Inversion-King (3x) 🟣",
+    desc: "Fahre die violette Thrill-Spur von YOY mindestens 3x an einem Tag!",
+    points: 40,
+    icon: "🟣"
+  },
+  {
+    id: "side_space_shot_3",
+    title: "Space Shot 60m Astronaut (3x) 🚀",
+    desc: "Schieße dich auf Space Shot mindestens 3x in den 60-Meter-Himmel!",
+    points: 40,
+    icon: "🚀"
+  },
+  {
+    id: "side_super_swing_3",
+    title: "Super Swing Höhenflug-Pilot (3x) 🎪",
+    desc: "Fahre das Wellenflug-Kettenkarussell Super Swing mindestens 3x!",
+    points: 35,
+    icon: "🎪"
+  },
+
+  // =========================================================================
+  // 3. KOMBINATIONEN & SPECIALS
+  // =========================================================================
+  {
     id: "side_yoy_duo",
-    title: "YOY Doppel-Duell (Chill & Thrill)",
+    title: "YOY Doppel-Duell (Chill & Thrill) ⚡",
     desc: "Fahre beide Spuren von YOY (Chill und Thrill) am selben Tag!",
-    points: 45
+    points: 45,
+    icon: "⚡"
   },
   {
     id: "side_water_combo",
-    title: "Wasser-Doppelpack (Crazy River + El Rio)",
-    desc: "Fahre beide großen Wasserbahnen am selben Nachmittag.",
-    points: 30
+    title: "Wasser-Trio (Crazy River + El Rio + Splash Battle) 🌊",
+    desc: "Fahre alle 3 Wasser-Attraktionen (Crazy River, El Rio Grande und Splash Battle) an einem Tag!",
+    points: 45,
+    icon: "💧"
   },
   {
+    id: "side_water_flat_double",
+    title: "Magen-Zentrifuge & Nässe-Doppel (6x 2 Fahrten) 🌪️🌊",
+    desc: "Fahre El Rio Grande, Crazy River, G-Force, Spinning Vibe, Blast und Tomahawk jeweils mindestens 2x!",
+    points: 40,
+    icon: "🌪️"
+  },
+  {
+    id: "side_space_kidz_5",
+    title: "Space Kidz Kindergarten-Astronaut (5x) 👶🚀",
+    desc: "Fahre den Kinder-Freifallturm Space Kidz ganze 5 Mal!",
+    points: 100,
+    icon: "👶"
+  },
+  {
+    id: "side_all_attractions",
+    title: "Walibi Komplettist: Alle Attraktionen bezwungen! 🌟👑",
+    desc: "Fahre jede einzelne Attraktion im gesamten Park mindestens 1x!",
+    points: 150,
+    icon: "🌟"
+  },
+
+  // =========================================================================
+  // 4. ERWEITERTE PEGEL-MEILENSTEINE (+ WEITERE 5 EINHEITEN)
+  // =========================================================================
+  {
     id: "side_beer_king_5",
-    title: "Gerstensaft-Meister (5 Bier)",
+    title: "Gerstensaft-Meister 🍺 (5 Bier)",
     desc: "Habe 5 Bier im Pegel-Tracker verbucht.",
-    points: 25
+    points: 25,
+    icon: "🍺"
+  },
+  {
+    id: "side_beer_king_10",
+    title: "Bier-König 🍺 (10 Bier)",
+    desc: "Habe 10 Bier im Pegel-Tracker verbucht.",
+    points: 50,
+    icon: "🍺"
+  },
+  {
+    id: "side_beer_king_15",
+    title: "Hopfen-Kaiser 🍺 (15 Bier)",
+    desc: "Habe 15 Bier im Pegel-Tracker verbucht – Brauereibesitzer ehrenhalber!",
+    points: 75,
+    icon: "🍺"
   },
   {
     id: "side_shot_duo",
-    title: "Doppel-Shot Salve (3 Shots)",
+    title: "Doppel-Shot Salve 🥃 (3 Shots)",
     desc: "Verbringe 3 Shots über den Tag verteilt im Pegel-Tracker.",
-    points: 30
+    points: 30,
+    icon: "🥃"
+  },
+  {
+    id: "side_shot_king_5",
+    title: "Schnaps-Drossel 🥃 (5 Shots)",
+    desc: "Habe 5 Shots im Pegel-Tracker verbucht.",
+    points: 40,
+    icon: "🥃"
+  },
+  {
+    id: "side_shot_king_10",
+    title: "Schnaps-Baron & Shot-Vernichter 🥃 (10 Shots)",
+    desc: "Habe 10 Shots im Pegel-Tracker verbucht – Standfestigkeit aus Granit!",
+    points: 70,
+    icon: "🥃"
+  },
+  {
+    id: "side_longdrink_master_5",
+    title: "Cocktail-Liebhaber 🍹 (5 Longdrinks)",
+    desc: "Habe 5 Longdrinks / Cocktails im Pegel-Tracker verbucht.",
+    points: 35,
+    icon: "🍹"
+  },
+  {
+    id: "side_longdrink_master_10",
+    title: "Cocktail-Legende & Mix-Chef 🍹 (10 Longdrinks)",
+    desc: "Habe 10 Longdrinks / Cocktails im Pegel-Tracker verbucht!",
+    points: 65,
+    icon: "🍹"
+  },
+  {
+    id: "side_joint_master_5",
+    title: "Kräuter-Guru 🌿 (5 Joints)",
+    desc: "Habe 5 Joints / Kräuter-Sessions im Pegel-Tracker verbucht.",
+    points: 35,
+    icon: "🌿"
+  },
+  {
+    id: "side_joint_master_10",
+    title: "Schwerelosigkeits-Guru 🌿 (10 Joints)",
+    desc: "Habe 10 Joints / Kräuter-Sessions im Pegel-Tracker verbucht – Lost Gravity im Kopf!",
+    points: 65,
+    icon: "🌿"
+  },
+  {
+    id: "side_drink_marathon_10",
+    title: "Pegel-Titan 👑 (10 Drinks Gesamt)",
+    desc: "Habe mindestens 10 Drinks insgesamt im Pegel-Tracker verbucht.",
+    points: 50,
+    icon: "👑"
+  },
+  {
+    id: "side_drink_marathon_15",
+    title: "Pegel-Gott 👑 (15 Drinks Gesamt)",
+    desc: "Habe mindestens 15 Drinks insgesamt im Pegel-Tracker verbucht!",
+    points: 75,
+    icon: "👑"
+  },
+  {
+    id: "side_drink_marathon_20",
+    title: "Unsterbliche Theken-Legende 👑 (20 Drinks Gesamt)",
+    desc: "Habe mindestens 20 Drinks insgesamt im Pegel-Tracker verbucht – Ehrenplatz in der Ruhmeshalle!",
+    points: 100,
+    icon: "👑"
+  },
+  {
+    id: "side_water_hero_5",
+    title: "Hydration-Ehrenmann 🥤 (5 Wasser/Softdrinks)",
+    desc: "Habe 5 Wasser oder Softdrinks getrunken – Vernunft muss belohnt werden!",
+    points: 25,
+    icon: "🥤"
   }
 ];

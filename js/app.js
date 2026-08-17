@@ -23,6 +23,7 @@ class MainApp {
     if (window.FeedModule) window.FeedModule.init();
     if (window.LeaderboardModule) window.LeaderboardModule.init();
     if (window.ParkGuideModule) window.ParkGuideModule.init();
+    if (window.ParkMapModule) window.ParkMapModule.init();
     if (window.AwardsModule) window.AwardsModule.init();
     if (window.CameraModule) window.CameraModule.init();
 
@@ -38,16 +39,54 @@ class MainApp {
   // --- 🛡️ SMART NAVIGATION & ANDROID HARDWARE BACK-BUTTON TRAPPING ---
   setupNavigationHistory() {
     this.lastBackPressTime = 0;
-    this.modalStack = [];
 
-    // Basis-State setzen
+    // Sofort 2 Einträge im History-Stack erzeugen (Root-State und Aktiver State), damit der Zurück-Button immer in der App gefangen wird
     try {
-      history.replaceState({ tab: this.currentTab, isRoot: true }, "");
+      history.replaceState({ appState: 'root', tab: this.currentTab }, "");
+      history.pushState({ appState: 'active', tab: this.currentTab }, "");
     } catch(e) {}
+
+    // Auf jede Touch- / Click-Interaktion sicherstellen, dass der Puffer immer aktiv ist
+    const ensureBuffer = () => {
+      try {
+        if (!history.state || history.state.appState !== 'active') {
+          history.pushState({ appState: 'active', tab: this.currentTab }, "");
+        }
+      } catch(e) {}
+    };
+    window.addEventListener("touchstart", ensureBuffer, { passive: true });
+    window.addEventListener("click", ensureBuffer, { passive: true });
+
+    // MutationObserver: Automatisch pushState wenn ein beliebiges Modal geöffnet wird
+    this.setupModalHistoryObserver();
 
     window.addEventListener("popstate", (e) => {
       this.handlePopState(e);
     });
+  }
+
+  setupModalHistoryObserver() {
+    try {
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach(mutation => {
+          if (mutation.type === "attributes" && mutation.attributeName === "class") {
+            const target = mutation.target;
+            if (target && target.classList && target.classList.contains("modal-overlay")) {
+              const isVisible = !target.classList.contains("hidden");
+              if (isVisible && target.id !== "accessCodeModal") {
+                try {
+                  history.pushState({ appState: 'modal', modalId: target.id }, "");
+                } catch(e) {}
+              }
+            }
+          }
+        });
+      });
+
+      document.querySelectorAll(".modal-overlay").forEach(modal => {
+        observer.observe(modal, { attributes: true, attributeFilter: ["class"] });
+      });
+    } catch(e) {}
   }
 
   handlePopState(e) {
@@ -65,11 +104,13 @@ class MainApp {
         window.QuestsModule.closeModal();
       } else if (modalId === "myProfileModal" && window.ProfileModule) {
         window.ProfileModule.closeMyProfileModal();
+      } else if (modalId === "parkMapModal" && window.ParkMapModule) {
+        window.ParkMapModule.closeModal();
       } else if (modalId === "gameEndedCelebrationModal" && window.AwardsModule) {
         window.AwardsModule.closeCelebrationModal();
       } else if (modalId === "accessCodeModal") {
         // Startmaske bleibt geöffnet
-        try { history.pushState({ modalId: "accessCodeModal" }, ""); } catch(err) {}
+        try { history.pushState({ appState: 'active', modalId: "accessCodeModal" }, ""); } catch(err) {}
         return;
       } else {
         topModal.classList.add("hidden");
@@ -77,9 +118,9 @@ class MainApp {
 
       if (window.GameAudio) window.GameAudio.playClick();
 
-      // History-State wiederherstellen, damit man in der App bleibt
+      // History-Buffer sofort wiederherstellen, damit der nächste Klick abgefangen wird
       try {
-        history.pushState({ tab: this.currentTab }, "");
+        history.pushState({ appState: 'active', tab: this.currentTab }, "");
       } catch (err) {}
       return;
     }
@@ -87,8 +128,9 @@ class MainApp {
     // 2. Kein Modal offen -> Prüfen, ob wir in einem Untertab sind
     if (this.currentTab !== "feed") {
       this.switchTab("feed", false);
+      if (window.GameAudio) window.GameAudio.playClick();
       try {
-        history.pushState({ tab: "feed" }, "");
+        history.pushState({ appState: 'active', tab: "feed" }, "");
       } catch(err) {}
       return;
     }
@@ -101,8 +143,9 @@ class MainApp {
     } else {
       this.lastBackPressTime = now;
       this.showToast("👆 Tippe noch einmal auf Zurück, um die App zu verlassen.");
+      // Puffer sofort wiederherstellen
       try {
-        history.pushState({ tab: "feed", isRoot: true }, "");
+        history.pushState({ appState: 'active', tab: "feed" }, "");
       } catch (err) {}
     }
   }
@@ -246,16 +289,21 @@ class MainApp {
     const container = document.getElementById("toastContainer");
     if (!container) return;
 
+    if (!this.recentToasts) this.recentToasts = new Set();
+    if (this.recentToasts.has(message)) return; // Verhindert 3-fache Duplikat-Toasts
+    this.recentToasts.add(message);
+    setTimeout(() => this.recentToasts.delete(message), 2500);
+
     const toast = document.createElement("div");
     toast.className = "toast-message";
     toast.innerHTML = message;
     container.appendChild(toast);
 
-    // Verlängerte Anzeigedauer (6,5 Sekunden) damit Sprüche & Infos bequem gelesen werden können
+    // Verlängerte Anzeigedauer (5 Sekunden) damit Sprüche & Infos bequem gelesen werden können
     setTimeout(() => {
       toast.classList.add("fade-out");
       setTimeout(() => toast.remove(), 300);
-    }, 6500);
+    }, 5000);
   }
 
   // --- STRIKT ABWECHSELNDE MASKOTTCHEN SPRÜCHE ROTATION (1x FRED -> 1x WALIBI -> 1x GROSSER) ---

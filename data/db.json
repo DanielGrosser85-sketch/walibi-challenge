@@ -4,29 +4,37 @@
       "id": "p1",
       "name": "Alex",
       "house": "Haus 1",
-      "avatar": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23e11d48'/><text x='50' y='60' font-size='40' text-anchor='middle' fill='white' font-family='sans-serif'>A</text></svg>",
-      "points": 85,
-      "drinksCount": 5,
+      "avatar": "assets/mascot_eddie_clown.jpg",
+      "points": 129,
+      "drinksCount": 0,
       "completedQuests": [
-        "coaster_untamed"
+        "coaster_tomahawk_roulette",
+        "coaster_goliath",
+        "coaster_untamed",
+        "coaster_lost_gravity",
+        "visitor_queue_diplomat"
       ],
       "drinksDetail": {
-        "beer": 2,
-        "shot": 1,
-        "longdrink": 1,
-        "joint": 1,
+        "beer": 0,
+        "shot": 0,
+        "longdrink": 0,
+        "joint": 0,
         "water": 0
       },
       "rideCounts": {
-        "attr_untamed": 1
-      }
+        "attr_goliath": 1,
+        "attr_untamed": 1,
+        "attr_lost_gravity": 1
+      },
+      "completedSideQuests": [],
+      "gutGlaubenCount": 1
     },
     {
       "id": "p2",
-      "name": "Stefan",
+      "name": "Stefanus",
       "house": "Haus 2",
-      "avatar": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23ec4899'/><text x='50' y='60' font-size='40' text-anchor='middle' fill='white' font-family='sans-serif'>S</text></svg>",
-      "points": 0,
+      "avatar": "assets/mascot_kangaroo.jpg",
+      "points": 5,
       "drinksCount": 0,
       "completedQuests": [],
       "drinksDetail": {
@@ -36,14 +44,15 @@
         "joint": 0,
         "water": 0
       },
-      "rideCounts": {}
+      "rideCounts": {},
+      "completedSideQuests": []
     },
     {
       "id": "p3",
       "name": "Felix",
       "house": "Haus 1",
       "avatar": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%2310b981'/><text x='50' y='60' font-size='40' text-anchor='middle' fill='white' font-family='sans-serif'>F</text></svg>",
-      "points": 0,
+      "points": 2,
       "drinksCount": 0,
       "completedQuests": [],
       "rideCounts": {},
@@ -53,14 +62,15 @@
         "longdrink": 0,
         "joint": 0,
         "water": 0
-      }
+      },
+      "completedSideQuests": []
     },
     {
       "id": "p4",
       "name": "Laura",
       "house": "Haus 2",
       "avatar": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23f59e0b'/><text x='50' y='60' font-size='40' text-anchor='middle' fill='white' font-family='sans-serif'>L</text></svg>",
-      "points": 0,
+      "points": 10,
       "drinksCount": 0,
       "completedQuests": [],
       "rideCounts": {},
@@ -70,24 +80,33 @@
         "longdrink": 0,
         "joint": 0,
         "water": 0
-      }
+      },
+      "completedSideQuests": []
     },
     {
       "id": "p_1786747056481_o5jo",
       "name": "grossek",
       "house": "Haus 1",
       "avatar": "assets/mascot_fox.jpg",
-      "points": 0,
+      "points": 125,
       "drinksCount": 0,
-      "completedQuests": [],
-      "rideCounts": {},
+      "completedQuests": [
+        "ride_gforce_after_chug"
+      ],
+      "rideCounts": {
+        "attr_yoy_chill": 1,
+        "attr_yoy_thrill": 1
+      },
       "drinksDetail": {
         "beer": 0,
         "shot": 0,
         "longdrink": 0,
         "joint": 0,
         "water": 0
-      }
+      },
+      "completedSideQuests": [
+        "side_yoy_duo"
+      ]
     }
   ],
   "houses": [
@@ -97,22 +116,177 @@
   ],
   "feed": [
     {
-      "id": "feed_1786967663681_8vi4u",
+      "id": "feed_1786986576155_4zjq1",
       "type": "quest",
-      "userId": "p1",
-      "userName": "Alex",
-      "userAvatar": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23e11d48'/><text x='50' y='60' font-size='40' text-anchor='middle' fill='white' font-family='sans-serif'>A</text></svg>",
+      "userId": "p_1786747056481_o5jo",
+      "userName": "grossek",
+      "userAvatar": "assets/mascot_fox.jpg",
       "userHouse": "Haus 1",
-      "questId": "coaster_untamed",
-      "questTitle": "UNTAMED: Hard Gaan Bezwinger 🪵",
-      "questDescription": "Hybrid-Achterbahn UNTAMED mit Händen oben fahren & 'HARD GAAN!' beim First Drop brüllen.",
-      "questIcon": "🪵",
-      "points": 40,
-      "actualPointsAwarded": 40,
+      "questId": "ride_gforce_after_chug",
+      "questTitle": "G-Force Zentrifuge 🍺🌀",
+      "questDescription": "Während der Fahrt auf einer Attraktion ein Getränk trinken, ohne einen einzigen Tropfen zu kleckern!",
+      "questIcon": "🍺",
+      "points": 35,
+      "basePoints": 35,
+      "actualPointsAwarded": 23,
+      "selectedOutcome": null,
+      "isFaithBased": false,
+      "witnesses": [
+        {
+          "userId": "p2",
+          "userName": "Stefanus",
+          "userAvatar": "assets/mascot_kangaroo.jpg",
+          "confirmed": true,
+          "confirmedAt": "2026-08-17T17:09:47.260Z"
+        }
+      ],
+      "witnessPending": true,
       "photo": null,
       "isVideo": null,
       "userComment": "",
-      "timestamp": "2026-08-17T11:54:23.681Z",
+      "timestamp": "2026-08-17T17:09:36.155Z",
+      "requiresVoting": true,
+      "votingLabel": "Trink-Präzision bei G-Kräften",
+      "votes": {
+        "p2": 3,
+        "p1": 3,
+        "p4": 4
+      },
+      "votingUnlocked": true,
+      "reactions": {
+        "🔥": [],
+        "🍺": [],
+        "👑": [],
+        "💀": [],
+        "👏": []
+      },
+      "comments": [],
+      "avgRating": "3.3",
+      "voteCount": 3,
+      "votePercentage": 75,
+      "votingCompleted": true
+    },
+    {
+      "id": "feed_1786986471097_dvtl2",
+      "type": "quest",
+      "userId": "p1",
+      "userName": "Alex",
+      "userAvatar": "assets/mascot_eddie_clown.jpg",
+      "userHouse": "Haus 1",
+      "questId": "visitor_queue_diplomat",
+      "questTitle": "Der Schlangen-Verhandler 🎟️ • 👤 Solo ganz nach vorne gedrängelt",
+      "questDescription": "Mit einer völlig absurden, charmanten Ausrede fremde Leute bequatschen, um sich ganz nach vorne durchzudrängeln.",
+      "questIcon": "🎟️",
+      "points": 30,
+      "basePoints": 30,
+      "actualPointsAwarded": 22,
+      "selectedOutcome": {
+        "id": "solo",
+        "label": "👤 Solo ganz nach vorne gedrängelt",
+        "points": 30,
+        "isSuccess": true,
+        "badge": "+30 Pkt"
+      },
+      "isFaithBased": false,
+      "witnesses": [
+        {
+          "userId": "p2",
+          "userName": "Stefanus",
+          "userAvatar": "assets/mascot_kangaroo.jpg",
+          "confirmed": true,
+          "confirmedAt": "2026-08-17T17:08:10.756Z"
+        }
+      ],
+      "witnessPending": true,
+      "photo": null,
+      "isVideo": null,
+      "userComment": "",
+      "timestamp": "2026-08-17T17:07:51.097Z",
+      "requiresVoting": true,
+      "votingLabel": "Überzeugungskraft & Dreistigkeit",
+      "votes": {
+        "p2": 3,
+        "p_1786747056481_o5jo": 3,
+        "p4": 5
+      },
+      "votingUnlocked": true,
+      "reactions": {
+        "🔥": [],
+        "🍺": [],
+        "👑": [],
+        "💀": [],
+        "👏": []
+      },
+      "comments": [],
+      "avgRating": "3.7",
+      "voteCount": 3,
+      "votePercentage": 75,
+      "votingCompleted": true
+    },
+    {
+      "id": "feed_1786986394992_3pw0a",
+      "type": "quest",
+      "userId": "p1",
+      "userName": "Alex",
+      "userAvatar": "assets/mascot_eddie_clown.jpg",
+      "userHouse": "Haus 1",
+      "questId": "coaster_lost_gravity",
+      "questTitle": "LOST GRAVITY: Schwerelos 🌀",
+      "questDescription": "Lost Gravity auf den Wing-Seat Außenplätzen fliegen ohne Festhalten bis zur Schlussbremse.",
+      "questIcon": "🌀",
+      "points": 35,
+      "basePoints": 35,
+      "actualPointsAwarded": 35,
+      "selectedOutcome": null,
+      "isFaithBased": false,
+      "witnesses": [
+        {
+          "userId": "p2",
+          "userName": "Stefanus",
+          "userAvatar": "assets/mascot_kangaroo.jpg",
+          "confirmed": true,
+          "confirmedAt": "2026-08-17T17:07:04.047Z"
+        }
+      ],
+      "witnessPending": false,
+      "photo": null,
+      "isVideo": null,
+      "userComment": "",
+      "timestamp": "2026-08-17T17:06:34.992Z",
+      "requiresVoting": false,
+      "votingLabel": "Leistung & Ausführung",
+      "votes": {},
+      "votingUnlocked": false,
+      "reactions": {
+        "🔥": [],
+        "🍺": [],
+        "👑": [],
+        "💀": [],
+        "👏": []
+      },
+      "comments": []
+    },
+    {
+      "id": "feed_1786986317049_eh5kj",
+      "type": "quest",
+      "userId": "p1",
+      "userName": "Alex",
+      "userAvatar": "assets/mascot_eddie_clown.jpg",
+      "userHouse": "Haus 1",
+      "questId": "coaster_untamed",
+      "questTitle": "Untamed Woodie Rache",
+      "questDescription": "Hybrid Monster",
+      "questIcon": "🎯",
+      "points": 32,
+      "basePoints": 40,
+      "actualPointsAwarded": 32,
+      "selectedOutcome": null,
+      "isFaithBased": true,
+      "witnesses": [],
+      "witnessPending": false,
+      "photo": null,
+      "userComment": "",
+      "timestamp": "2026-08-17T17:05:17.049Z",
       "requiresVoting": false,
       "votingLabel": "Leistung & Ausführung",
       "votes": {},
@@ -127,106 +301,306 @@
       "comments": []
     },
     {
-      "id": "feed_1786967644103_6xviu",
-      "type": "drink",
+      "id": "feed_1786986317021_cf7cv",
+      "type": "quest",
       "userId": "p1",
       "userName": "Alex",
-      "userAvatar": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23e11d48'/><text x='50' y='60' font-size='40' text-anchor='middle' fill='white' font-family='sans-serif'>A</text></svg>",
+      "userAvatar": "assets/mascot_eddie_clown.jpg",
       "userHouse": "Haus 1",
-      "itemId": "beer",
-      "itemName": "Bier / Radler",
-      "itemIcon": "🍺",
+      "questId": "coaster_goliath",
+      "questTitle": "Goliath Front Row",
+      "questDescription": "Adrenalin Pur",
+      "questIcon": "🎯",
+      "points": 40,
+      "basePoints": 40,
+      "actualPointsAwarded": 40,
+      "selectedOutcome": null,
+      "isFaithBased": false,
+      "witnesses": [
+        {
+          "userId": "p2",
+          "userName": "Stefanus",
+          "confirmed": true,
+          "confirmedAt": "2026-08-17T17:05:17.027Z"
+        }
+      ],
+      "witnessPending": false,
+      "photo": null,
+      "userComment": "",
+      "timestamp": "2026-08-17T17:05:17.021Z",
+      "requiresVoting": false,
+      "votingLabel": "Leistung & Ausführung",
+      "votes": {},
+      "votingUnlocked": false,
+      "reactions": {
+        "🔥": [],
+        "🍺": [],
+        "👑": [],
+        "💀": [],
+        "👏": []
+      },
+      "comments": []
+    },
+    {
+      "id": "feed_1786986317013_xvuob",
+      "type": "quest",
+      "userId": "p1",
+      "userName": "Alex",
+      "userAvatar": "assets/mascot_eddie_clown.jpg",
+      "userHouse": "Haus 1",
+      "questId": "coaster_tomahawk_roulette",
+      "questTitle": "Tomahawk Kotz-Roulette • 🤮 Gekotzt / Vorzeitig abgebrochen",
+      "questDescription": "Malus-Strafe",
+      "questIcon": "🎯",
+      "points": -50,
+      "basePoints": -50,
+      "actualPointsAwarded": -50,
+      "selectedOutcome": {
+        "id": "puke",
+        "label": "🤮 Gekotzt (-50 Pkt)",
+        "points": -50
+      },
+      "isFaithBased": false,
+      "witnesses": [],
+      "witnessPending": false,
+      "photo": null,
+      "userComment": "",
+      "timestamp": "2026-08-17T17:05:17.013Z",
+      "requiresVoting": false,
+      "votingLabel": "Leistung & Ausführung",
+      "votes": {},
+      "votingUnlocked": true,
+      "reactions": {
+        "🔥": [],
+        "🍺": [],
+        "👑": [],
+        "💀": [],
+        "👏": []
+      },
+      "comments": []
+    },
+    {
+      "id": "feed_achieve_p_1786747056481_o5jo_side_yoy_duo",
+      "type": "achievement",
+      "userId": "p_1786747056481_o5jo",
+      "userName": "grossek",
+      "userAvatar": "assets/mascot_fox.jpg",
+      "userHouse": "Haus 1",
+      "achievementId": "side_yoy_duo",
+      "achievementTitle": "YOY Doppel-Duell (Chill & Thrill) ⚡",
+      "achievementDesc": "Fahre beide Spuren von YOY (Chill und Thrill) am selben Tag!",
+      "achievementIcon": "⚡",
+      "points": 45,
+      "actualPointsAwarded": 45,
+      "timestamp": "2026-08-17T16:28:26.348Z",
+      "reactions": {
+        "🔥": [],
+        "🍺": [],
+        "👑": [],
+        "💀": [],
+        "👏": []
+      },
+      "comments": []
+    },
+    {
+      "id": "feed_1786983711337_lww2q",
+      "type": "social",
+      "userId": "p_1786747056481_o5jo",
+      "userName": "grossek",
+      "userAvatar": "assets/mascot_fox.jpg",
+      "userHouse": "Haus 1",
+      "text": "test",
+      "photo": null,
+      "isVideo": null,
       "points": 5,
-      "timestamp": "2026-08-17T11:54:04.103Z",
+      "actualPointsAwarded": 5,
+      "timestamp": "2026-08-17T16:21:51.337Z",
       "reactions": {
-        "🍻": [],
         "🔥": [],
-        "💀": []
+        "🍺": [
+          "p1"
+        ],
+        "👑": [],
+        "💀": [],
+        "👏": []
       },
-      "comments": []
+      "comments": [
+        {
+          "id": "c_1786983765959_tekv",
+          "userId": "p1",
+          "userName": "Alex",
+          "userAvatar": "assets/mascot_eddie_clown.jpg",
+          "text": "",
+          "photo": "/uploads/comment_1786983765958_3mwy2d.jpg",
+          "points": 5,
+          "timestamp": "2026-08-17T16:22:45.959Z"
+        }
+      ]
     },
     {
-      "id": "feed_1786967639695_64ngx",
-      "type": "drink",
+      "id": "feed_1786983670695_xbnmf",
+      "type": "social",
+      "userId": "p4",
+      "userName": "Laura",
+      "userAvatar": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23f59e0b'/><text x='50' y='60' font-size='40' text-anchor='middle' fill='white' font-family='sans-serif'>L</text></svg>",
+      "userHouse": "Haus 2",
+      "text": "Photo post",
+      "photo": "/uploads/post_1786983670694_l95wlo.png",
+      "isVideo": false,
+      "points": 10,
+      "actualPointsAwarded": 10,
+      "timestamp": "2026-08-17T16:21:10.695Z",
+      "reactions": {
+        "🔥": [],
+        "🍺": [],
+        "👑": [],
+        "💀": [],
+        "👏": []
+      },
+      "comments": [
+        {
+          "id": "c_1786983670712_ei78",
+          "userId": "p2",
+          "userName": "Stefanus",
+          "userAvatar": "assets/mascot_kangaroo.jpg",
+          "text": "Photo reply",
+          "photo": "/uploads/comment_1786983670712_r96ayg.png",
+          "points": 5,
+          "timestamp": "2026-08-17T16:21:10.713Z"
+        },
+        {
+          "id": "c_1786983703399_0w8y",
+          "userId": "p_1786747056481_o5jo",
+          "userName": "grossek",
+          "userAvatar": "assets/mascot_fox.jpg",
+          "text": "cool",
+          "photo": null,
+          "points": 2,
+          "timestamp": "2026-08-17T16:21:43.399Z"
+        }
+      ]
+    },
+    {
+      "id": "feed_1786983661944_3e8bw",
+      "type": "social",
       "userId": "p1",
       "userName": "Alex",
-      "userAvatar": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23e11d48'/><text x='50' y='60' font-size='40' text-anchor='middle' fill='white' font-family='sans-serif'>A</text></svg>",
+      "userAvatar": "assets/mascot_eddie_clown.jpg",
       "userHouse": "Haus 1",
-      "itemId": "beer",
-      "itemName": "Bier / Radler",
-      "itemIcon": "🍺",
+      "text": "Test text post",
+      "photo": null,
+      "isVideo": null,
       "points": 5,
-      "timestamp": "2026-08-17T11:53:59.695Z",
+      "actualPointsAwarded": 5,
+      "timestamp": "2026-08-17T16:21:01.944Z",
       "reactions": {
-        "🍻": [],
+        "🔥": [
+          "p2"
+        ],
+        "🍺": [],
+        "👑": [],
+        "💀": [],
+        "👏": []
+      },
+      "comments": [
+        {
+          "id": "c_1786983661959_8jtl",
+          "userId": "p3",
+          "userName": "Felix",
+          "userAvatar": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%2310b981'/><text x='50' y='60' font-size='40' text-anchor='middle' fill='white' font-family='sans-serif'>F</text></svg>",
+          "text": "Test comment",
+          "photo": null,
+          "points": 2,
+          "timestamp": "2026-08-17T16:21:01.959Z"
+        }
+      ]
+    },
+    {
+      "id": "feed_1786983363937_vzx2l",
+      "type": "social",
+      "userId": "p_1786747056481_o5jo",
+      "userName": "grossek",
+      "userAvatar": "assets/mascot_fox.jpg",
+      "userHouse": "Haus 1",
+      "text": "test",
+      "photo": null,
+      "isVideo": null,
+      "points": 5,
+      "actualPointsAwarded": 5,
+      "timestamp": "2026-08-17T16:16:03.937Z",
+      "reactions": {
         "🔥": [],
-        "💀": []
+        "🍺": [
+          "p2"
+        ],
+        "👑": [
+          "p2",
+          "p1"
+        ],
+        "💀": [],
+        "👏": []
+      },
+      "comments": [
+        {
+          "id": "c_1786983484814_8w46",
+          "userId": "p1",
+          "userName": "Alex",
+          "userAvatar": "assets/mascot_eddie_clown.jpg",
+          "text": "ok",
+          "photo": null,
+          "points": 2,
+          "timestamp": "2026-08-17T16:18:04.814Z"
+        }
+      ]
+    },
+    {
+      "id": "feed_1786983336012_cpmwz",
+      "type": "social",
+      "userId": "p_1786747056481_o5jo",
+      "userName": "grossek",
+      "userAvatar": "assets/mascot_fox.jpg",
+      "userHouse": "Haus 1",
+      "text": "test",
+      "photo": null,
+      "isVideo": null,
+      "points": 5,
+      "actualPointsAwarded": 5,
+      "timestamp": "2026-08-17T16:15:36.012Z",
+      "reactions": {
+        "🔥": [],
+        "🍺": [],
+        "👑": [],
+        "💀": [],
+        "👏": []
       },
       "comments": []
     },
     {
-      "id": "feed_1786967633170_vth8n",
-      "type": "drink",
-      "userId": "p1",
-      "userName": "Alex",
-      "userAvatar": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23e11d48'/><text x='50' y='60' font-size='40' text-anchor='middle' fill='white' font-family='sans-serif'>A</text></svg>",
+      "id": "feed_1786983323281_djghc",
+      "type": "social",
+      "userId": "p_1786747056481_o5jo",
+      "userName": "grossek",
+      "userAvatar": "assets/mascot_fox.jpg",
       "userHouse": "Haus 1",
-      "itemId": "joint",
-      "itemName": "Joint / Kräuter",
-      "itemIcon": "🌿",
-      "points": 10,
-      "timestamp": "2026-08-17T11:53:53.170Z",
+      "text": "test",
+      "photo": null,
+      "isVideo": null,
+      "points": 5,
+      "actualPointsAwarded": 5,
+      "timestamp": "2026-08-17T16:15:23.281Z",
       "reactions": {
-        "🍻": [],
         "🔥": [],
-        "💀": []
-      },
-      "comments": []
-    },
-    {
-      "id": "feed_1786967625062_8ku2w",
-      "type": "drink",
-      "userId": "p1",
-      "userName": "Alex",
-      "userAvatar": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23e11d48'/><text x='50' y='60' font-size='40' text-anchor='middle' fill='white' font-family='sans-serif'>A</text></svg>",
-      "userHouse": "Haus 1",
-      "itemId": "longdrink",
-      "itemName": "Longdrink / Cocktail",
-      "itemIcon": "🍹",
-      "points": 10,
-      "timestamp": "2026-08-17T11:53:45.062Z",
-      "reactions": {
-        "🍻": [],
-        "🔥": [],
-        "💀": []
-      },
-      "comments": []
-    },
-    {
-      "id": "feed_1786967616113_khhhp",
-      "type": "drink",
-      "userId": "p1",
-      "userName": "Alex",
-      "userAvatar": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23e11d48'/><text x='50' y='60' font-size='40' text-anchor='middle' fill='white' font-family='sans-serif'>A</text></svg>",
-      "userHouse": "Haus 1",
-      "itemId": "shot",
-      "itemName": "Shot / Schnaps",
-      "itemIcon": "🥃",
-      "points": 15,
-      "timestamp": "2026-08-17T11:53:36.113Z",
-      "reactions": {
-        "🍻": [],
-        "🔥": [],
-        "💀": []
+        "🍺": [],
+        "👑": [],
+        "💀": [],
+        "👏": []
       },
       "comments": []
     }
   ],
-  "version": 107,
+  "version": 466,
   "gameStatus": {
-    "isRunning": false,
-    "startedAt": "2026-08-15T00:37:48.287Z",
-    "isEnded": true,
-    "endedAt": "2026-08-17T11:14:17.406Z"
+    "isRunning": true,
+    "startedAt": "2026-08-17T16:06:59.056Z"
   }
 }

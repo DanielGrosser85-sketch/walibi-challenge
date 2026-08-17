@@ -78,7 +78,11 @@ class AppStore {
           parsed.counterItems = window.COUNTER_ITEMS || [];
           if (!Array.isArray(parsed.players)) parsed.players = this.getDefaultState().players;
           if (!Array.isArray(parsed.houses)) parsed.houses = ["Haus 1", "Haus 2", "Haus 3"];
-          if (!Array.isArray(parsed.feed)) parsed.feed = [];
+          if (!Array.isArray(parsed.feed)) {
+            parsed.feed = [];
+          } else {
+            parsed.feed = parsed.feed.filter(item => item && item.type !== "drink");
+          }
 
           // Aktiven Benutzer über User-Key wiederherstellen
           if (savedUserId) {
@@ -155,8 +159,8 @@ class AppStore {
   getStateFingerprint(db) {
     if (!db) return "";
     try {
-      const playersPart = (db.players || []).map(p => `${p.id}:${p.points}:${p.drinksCount}:${(p.completedQuests||[]).length}:${p.name}:${p.avatar}`).join("|");
-      const feedPart = (db.feed || []).map(f => `${f.id}:${(f.comments||[]).length}:${Object.keys(f.votes||{}).length}:${(f.actualPointsAwarded||0)}:${JSON.stringify(f.reactions||{})}`).join("|");
+      const playersPart = (db.players || []).map(p => `${p.id}:${p.points}:${p.drinksCount}:${(p.completedQuests||[]).length}:${p.gutGlaubenCount||0}:${p.name}:${p.avatar}`).join("|");
+      const feedPart = (db.feed || []).map(f => `${f.id}:${(f.comments||[]).length}:${JSON.stringify(f.votes||{})}:${(f.actualPointsAwarded||0)}:${JSON.stringify(f.reactions||{})}:${JSON.stringify(f.witnesses||[])}`).join("|");
       const gameStatus = db.gameStatus || "running";
       return `${playersPart}###${feedPart}###${gameStatus}`;
     } catch(e) {
@@ -224,7 +228,7 @@ class AppStore {
       this.state.houses = serverDb.houses;
     }
     if (Array.isArray(serverDb.feed)) {
-      this.state.feed = serverDb.feed;
+      this.state.feed = serverDb.feed.filter(item => item && item.type !== "drink");
     }
     if (serverDb.gameStatus) {
       this.state.gameStatus = serverDb.gameStatus;
@@ -235,6 +239,7 @@ class AppStore {
       const myUpdated = this.state.players.find(p => p.id === savedUserId);
       if (myUpdated) {
         this.state.currentUser = { ...myUpdated };
+        this.checkAndAutoUnlockSideQuests(savedUserId);
       }
     }
 
@@ -316,15 +321,438 @@ class AppStore {
         if (json.player) {
           const pIdx = this.state.players.findIndex(p => p.id === userId);
           if (pIdx >= 0) {
-            this.state.players[pIdx] = { ...this.state.players[pIdx], ...json.player };
+            this.state.players[pIdx] = {
+              ...this.state.players[pIdx],
+              ...json.player,
+              rideCounts: { ...(json.player.rideCounts || {}), ...(this.state.players[pIdx].rideCounts || {}) },
+              points: Math.max(json.player.points || 0, this.state.players[pIdx].points || 0)
+            };
           }
           if (this.state.currentUser && this.state.currentUser.id === userId) {
-            this.state.currentUser = { ...this.state.currentUser, ...json.player };
+            this.state.currentUser = { ...this.state.players[pIdx] };
           }
           this.saveLocalState();
         }
       }
     } catch (e) {}
+  }
+
+  // --- FAHRTEN-ZÄHLER LOGGEN ---
+  async logRide(userId, attrId, delta = 1) {
+    const player = this.state.players.find(p => p.id === userId);
+    if (!player) return;
+
+    if (!player.rideCounts) player.rideCounts = {};
+    const currentCount = Number(player.rideCounts[attrId] || 0);
+    const newCount = Math.max(0, currentCount + delta);
+    player.rideCounts[attrId] = newCount;
+
+    if (delta > 0) {
+      player.points = Number(player.points || 0) + (5 * delta);
+    } else if (delta < 0 && currentCount > 0) {
+      player.points = Math.max(0, Number(player.points || 0) + (5 * delta));
+    }
+
+    if (this.state.currentUser && this.state.currentUser.id === userId) {
+      this.state.currentUser = { ...player };
+    }
+
+    this.saveLocalState();
+    if (window.app) window.app.renderAllViews();
+    if (window.ParkGuideModule) window.ParkGuideModule.render();
+    if (window.ProfileModule) window.ProfileModule.updateHeaderProfile();
+
+    try {
+      const res = await fetch("/api/attraction/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, attrId, delta })
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.player) {
+          const idx = this.state.players.findIndex(p => p.id === userId);
+          if (idx >= 0) {
+            this.state.players[idx] = {
+              ...this.state.players[idx],
+              ...json.player,
+              rideCounts: json.player.rideCounts || player.rideCounts,
+              points: Math.max(json.player.points || 0, player.points || 0)
+            };
+          }
+          if (this.state.currentUser && this.state.currentUser.id === userId) {
+            this.state.currentUser = { ...this.state.players[idx] };
+          }
+          this.saveLocalState();
+        }
+      }
+    } catch (e) {
+      // Fallback auf updateProfile falls Endpoint noch nicht neu gestartet wurde
+      try {
+        await fetch("/api/player/update", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: userId, rideCounts: player.rideCounts, points: player.points })
+        });
+      } catch(err) {}
+    }
+
+    // Nach jeder Fahrt automatisch prüfen, ob Nebenquests freigeschaltet wurden
+    this.checkAndAutoUnlockSideQuests(userId);
+  }
+
+  // --- NEBENQUESTS STATUS & AUTOMATISCHE FREISCHALTUNG ---
+  getSideQuestStatus(sqId, player) {
+    if (!player) return { isCompleted: false, isGoalReached: false, current: 0, target: 1, percent: 0, progressText: "0%" };
+
+    const rideCounts = player.rideCounts || {};
+    const drinksDetail = player.drinksDetail || {};
+    const completedSideQuests = player.completedSideQuests || [];
+    const isCompleted = completedSideQuests.includes(sqId);
+
+    const coasterAttrIds = [
+      "attr_yoy_chill", "attr_yoy_thrill", "attr_untamed", "attr_goliath",
+      "attr_lost_gravity", "attr_xpress", "attr_speed_of_sound", "attr_condor",
+      "attr_eat_my_dust", "attr_drako"
+    ];
+
+    let totalCoasterRides = 0;
+    coasterAttrIds.forEach(id => {
+      totalCoasterRides += Number(rideCounts[id] || 0);
+    });
+
+    let current = 0;
+    let target = 1;
+    let progressText = "";
+
+    switch (sqId) {
+      // 1. ACHTERBAHN MARATHONS (5, 10, 15, 20)
+      case "side_coaster_marathon_5":
+        current = totalCoasterRides;
+        target = 5;
+        progressText = `${Math.min(target, current)} / ${target} Achterbahn-Fahrten`;
+        break;
+
+      case "side_coaster_marathon_10":
+        current = totalCoasterRides;
+        target = 10;
+        progressText = `${Math.min(target, current)} / ${target} Achterbahn-Fahrten`;
+        break;
+
+      case "side_coaster_marathon_15":
+        current = totalCoasterRides;
+        target = 15;
+        progressText = `${Math.min(target, current)} / ${target} Achterbahn-Fahrten`;
+        break;
+
+      case "side_coaster_marathon_20":
+        current = totalCoasterRides;
+        target = 20;
+        progressText = `${Math.min(target, current)} / ${target} Achterbahn-Fahrten`;
+        break;
+
+      // 2. 3x FAHRTEN EINZEL-ATTRAKTIONEN
+      case "side_untamed_master":
+        current = Number(rideCounts["attr_untamed"] || 0);
+        target = 3;
+        progressText = `${Math.min(target, current)} / ${target} Fahrten`;
+        break;
+
+      case "side_goliath_king":
+        current = Number(rideCounts["attr_goliath"] || 0);
+        target = 3;
+        progressText = `${Math.min(target, current)} / ${target} Fahrten`;
+        break;
+
+      case "side_condor_3":
+        current = Number(rideCounts["attr_condor"] || 0);
+        target = 3;
+        progressText = `${Math.min(target, current)} / ${target} Fahrten`;
+        break;
+
+      case "side_lost_gravity_3":
+        current = Number(rideCounts["attr_lost_gravity"] || 0);
+        target = 3;
+        progressText = `${Math.min(target, current)} / ${target} Fahrten`;
+        break;
+
+      case "side_xpress_3":
+        current = Number(rideCounts["attr_xpress"] || 0);
+        target = 3;
+        progressText = `${Math.min(target, current)} / ${target} Fahrten`;
+        break;
+
+      case "side_eat_my_dust_3":
+        current = Number(rideCounts["attr_eat_my_dust"] || 0);
+        target = 3;
+        progressText = `${Math.min(target, current)} / ${target} Fahrten`;
+        break;
+
+      case "side_yoy_chill_3":
+        current = Number(rideCounts["attr_yoy_chill"] || 0);
+        target = 3;
+        progressText = `${Math.min(target, current)} / ${target} Fahrten`;
+        break;
+
+      case "side_yoy_thrill_3":
+        current = Number(rideCounts["attr_yoy_thrill"] || 0);
+        target = 3;
+        progressText = `${Math.min(target, current)} / ${target} Fahrten`;
+        break;
+
+      case "side_space_shot_3":
+        current = Number(rideCounts["attr_space_shot"] || 0);
+        target = 3;
+        progressText = `${Math.min(target, current)} / ${target} Fahrten`;
+        break;
+
+      case "side_super_swing_3":
+        current = Number(rideCounts["attr_super_swing"] || 0);
+        target = 3;
+        progressText = `${Math.min(target, current)} / ${target} Fahrten`;
+        break;
+
+      // 3. KOMBINATIONEN & SPECIALS
+      case "side_yoy_duo": {
+        const chill = Number(rideCounts["attr_yoy_chill"] || 0);
+        const thrill = Number(rideCounts["attr_yoy_thrill"] || 0);
+        current = (chill > 0 ? 1 : 0) + (thrill > 0 ? 1 : 0);
+        target = 2;
+        progressText = `Chill: ${chill > 0 ? '1/1 ✅' : '0/1 ⏳'} • Thrill: ${thrill > 0 ? '1/1 ✅' : '0/1 ⏳'}`;
+        break;
+      }
+
+      case "side_water_combo": {
+        const river = Number(rideCounts["attr_crazy_river"] || 0);
+        const rio = Number(rideCounts["attr_el_rio_grande"] || 0);
+        const splash = Number(rideCounts["attr_splash_battle"] || 0);
+        current = (river > 0 ? 1 : 0) + (rio > 0 ? 1 : 0) + (splash > 0 ? 1 : 0);
+        target = 3;
+        progressText = `Crazy River: ${river > 0 ? '1/1 ✅' : '0/1 ⏳'} • El Rio: ${rio > 0 ? '1/1 ✅' : '0/1 ⏳'} • Splash Battle: ${splash > 0 ? '1/1 ✅' : '0/1 ⏳'}`;
+        break;
+      }
+
+      case "side_water_flat_double": {
+        const rio = Number(rideCounts["attr_el_rio_grande"] || 0);
+        const river = Number(rideCounts["attr_crazy_river"] || 0);
+        const gforce = Number(rideCounts["attr_g_force"] || 0);
+        const vibe = Number(rideCounts["attr_spinning_vibe"] || 0);
+        const blast = Number(rideCounts["attr_blast"] || 0);
+        const tomahawk = Number(rideCounts["attr_tomahawk"] || 0);
+        current = (rio >= 2 ? 1 : 0) + (river >= 2 ? 1 : 0) + (gforce >= 2 ? 1 : 0) + (vibe >= 2 ? 1 : 0) + (blast >= 2 ? 1 : 0) + (tomahawk >= 2 ? 1 : 0);
+        target = 6;
+        progressText = `${current} / 6 Attraktionen 2x bezwungen (${rio}/2, ${river}/2, ${gforce}/2, ${vibe}/2, ${blast}/2, ${tomahawk}/2)`;
+        break;
+      }
+
+      case "side_space_kidz_5":
+        current = Number(rideCounts["attr_space_kidz"] || 0);
+        target = 5;
+        progressText = `${Math.min(target, current)} / ${target} Fahrten`;
+        break;
+
+      case "side_all_attractions": {
+        const allAttrs = window.WALIBI_ATTRACTIONS || [];
+        target = allAttrs.length;
+        current = allAttrs.filter(a => Number(rideCounts[a.id] || 0) >= 1).length;
+        progressText = `${current} / ${target} verschiedene Attraktionen bezwungen`;
+        break;
+      }
+
+      // 4. ERWEITERTE PEGEL-MEILENSTEINE
+      case "side_beer_king_5":
+        current = Number(drinksDetail.beer || 0);
+        target = 5;
+        progressText = `${Math.min(target, current)} / ${target} Bier`;
+        break;
+
+      case "side_beer_king_10":
+        current = Number(drinksDetail.beer || 0);
+        target = 10;
+        progressText = `${Math.min(target, current)} / ${target} Bier`;
+        break;
+
+      case "side_beer_king_15":
+        current = Number(drinksDetail.beer || 0);
+        target = 15;
+        progressText = `${Math.min(target, current)} / ${target} Bier`;
+        break;
+
+      case "side_shot_duo":
+        current = Number(drinksDetail.shot || 0);
+        target = 3;
+        progressText = `${Math.min(target, current)} / ${target} Shots`;
+        break;
+
+      case "side_shot_king_5":
+        current = Number(drinksDetail.shot || 0);
+        target = 5;
+        progressText = `${Math.min(target, current)} / ${target} Shots`;
+        break;
+
+      case "side_shot_king_10":
+        current = Number(drinksDetail.shot || 0);
+        target = 10;
+        progressText = `${Math.min(target, current)} / ${target} Shots`;
+        break;
+
+      case "side_longdrink_master_5":
+        current = Number(drinksDetail.longdrink || 0);
+        target = 5;
+        progressText = `${Math.min(target, current)} / ${target} Longdrinks`;
+        break;
+
+      case "side_longdrink_master_10":
+        current = Number(drinksDetail.longdrink || 0);
+        target = 10;
+        progressText = `${Math.min(target, current)} / ${target} Longdrinks`;
+        break;
+
+      case "side_joint_master_5":
+        current = Number(drinksDetail.joint || 0);
+        target = 5;
+        progressText = `${Math.min(target, current)} / ${target} Joints`;
+        break;
+
+      case "side_joint_master_10":
+        current = Number(drinksDetail.joint || 0);
+        target = 10;
+        progressText = `${Math.min(target, current)} / ${target} Joints`;
+        break;
+
+      case "side_drink_marathon_10":
+        current = Number(player.drinksCount || 0);
+        target = 10;
+        progressText = `${Math.min(target, current)} / ${target} Drinks`;
+        break;
+
+      case "side_drink_marathon_15":
+        current = Number(player.drinksCount || 0);
+        target = 15;
+        progressText = `${Math.min(target, current)} / ${target} Drinks`;
+        break;
+
+      case "side_drink_marathon_20":
+        current = Number(player.drinksCount || 0);
+        target = 20;
+        progressText = `${Math.min(target, current)} / ${target} Drinks`;
+        break;
+
+      case "side_water_hero_5":
+        current = Number(drinksDetail.water || 0);
+        target = 5;
+        progressText = `${Math.min(target, current)} / ${target} Wasser/Softdrinks`;
+        break;
+
+      default:
+        current = 0;
+        target = 1;
+        progressText = "0 / 1";
+    }
+
+    const percent = Math.min(100, Math.round((current / target) * 100));
+    const isGoalReached = current >= target;
+
+    return {
+      isCompleted,
+      isGoalReached,
+      current,
+      target,
+      percent,
+      progressText
+    };
+  }
+
+  async checkAndAutoUnlockSideQuests(userId) {
+    if (this.isCheckingSideQuests) return;
+    this.isCheckingSideQuests = true;
+
+    try {
+      const player = this.state.players.find(p => p.id === userId);
+      if (!player) return;
+
+      const sideQuests = window.SIDE_QUESTS || [];
+      let unlockedAny = false;
+      const newlyUnlocked = [];
+
+      if (!player.completedSideQuests) player.completedSideQuests = [];
+
+      for (const sq of sideQuests) {
+        if (!player.completedSideQuests.includes(sq.id)) {
+          const status = this.getSideQuestStatus(sq.id, player);
+          if (status.isGoalReached) {
+            // 🎉 Automatische Freischaltung!
+            player.completedSideQuests.push(sq.id);
+            player.points = Number(player.points || 0) + sq.points;
+            unlockedAny = true;
+            newlyUnlocked.push(sq);
+
+            const isCurrent = this.state.currentUser && this.state.currentUser.id === player.id;
+            if (isCurrent) {
+              if (window.GameAudio) window.GameAudio.playFanfare();
+              if (window.app && window.app.fireConfetti) window.app.fireConfetti();
+              if (window.app && window.app.showToast) {
+                window.app.showToast(`🏆 <strong>Errungenschaft freigeschaltet!</strong><br>${sq.title} (+${sq.points} Pkt)`);
+              }
+            }
+          }
+        }
+      }
+
+      if (unlockedAny) {
+        if (this.state.currentUser && this.state.currentUser.id === player.id) {
+          this.state.currentUser = { ...player };
+        }
+
+        // Für jede neue Errungenschaft max. 1 Feed-Item anlegen (Strikte Duplikat-Vermeidung)
+        for (const sq of newlyUnlocked) {
+          const alreadyInFeed = this.state.feed.some(f => f.type === "achievement" && f.userId === player.id && f.achievementId === sq.id);
+          if (!alreadyInFeed) {
+            const feedItem = {
+              id: `feed_achieve_${player.id}_${sq.id}`,
+              type: "achievement",
+              userId: player.id,
+              userName: player.name,
+              userAvatar: player.avatar,
+              userHouse: player.house,
+              achievementId: sq.id,
+              achievementTitle: sq.title,
+              achievementDesc: sq.desc,
+              achievementIcon: sq.icon || "🏆",
+              points: sq.points,
+              actualPointsAwarded: sq.points,
+              timestamp: new Date().toISOString(),
+              reactions: { "🔥": [], "🍺": [], "👑": [], "💀": [], "👏": [] },
+              comments: []
+            };
+            this.state.feed.unshift(feedItem);
+
+            // An Server senden
+            try {
+              fetch("/api/achievement/unlock", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  userId: player.id,
+                  achievement: sq,
+                  feedItem: feedItem
+                })
+              }).catch(() => {});
+            } catch (e) {}
+          }
+        }
+
+        this.saveLocalState();
+        await this.updateProfile(player.id, {
+          completedSideQuests: player.completedSideQuests,
+          points: player.points
+        });
+        if (window.app) window.app.renderAllViews();
+        if (window.ProfileModule) window.ProfileModule.updateHeaderProfile();
+      }
+    } finally {
+      this.isCheckingSideQuests = false;
+    }
   }
 
   addPlayer(name, house, avatar) {
@@ -344,32 +772,63 @@ class AppStore {
   }
 
   // --- QUEST ABSCHLIESSEN ---
-  async completeQuest(userId, questId, photoBase64, customTitle = null, customDesc = null, userComment = "") {
+  async completeQuest(userId, questId, photoBase64, customTitle = null, customDesc = null, userComment = "", options = {}) {
     const player = this.state.players.find(p => p.id === userId);
-    const quest = this.state.quests.find(q => q.id === questId);
+    const quest = (this.state.quests || []).find(q => q.id === questId) || (window.DEFAULT_QUESTS || []).find(q => q.id === questId);
     if (!player || !quest) return null;
 
-    const payload = {
-      userId: userId,
-      questId: quest.id,
-      questTitle: customTitle || quest.title,
-      questDescription: customDesc || quest.description,
-      questIcon: quest.icon || "🎯",
-      points: quest.points,
-      requiresVoting: quest.requiresVoting,
-      votingLabel: quest.votingLabel,
-      photoBase64: photoBase64 || null,
-      userComment: userComment || ""
-    };
+    const {
+      selectedOutcome = null,
+      outcomePoints = quest.points,
+      witnessIds = [],
+      isFaithBased = false
+    } = options;
 
-    const requiresVoting = quest.requiresVoting;
-    const initialPoints = requiresVoting ? 0 : quest.points;
+    let basePoints = typeof outcomePoints === "number" ? outcomePoints : quest.points;
+    let actualPoints = basePoints;
+
+    if (isFaithBased) {
+      if (basePoints > 0) {
+        actualPoints = Math.round(basePoints * 0.8); // 20% Ehren-Abzug
+      }
+      player.gutGlaubenCount = (player.gutGlaubenCount || 0) + 1;
+    }
+
+    const requiresVoting = quest.requiresVoting === true;
+    const hasWitnesses = Array.isArray(witnessIds) && witnessIds.length > 0;
+    const requiresWitnessPending = hasWitnesses && (quest.witnessRequirement === "required" || quest.requiresWitness === true);
+
+    const witnesses = hasWitnesses ? witnessIds.map(wId => {
+      const p = this.state.players.find(pl => pl.id === wId);
+      return {
+        userId: wId,
+        userName: p ? p.name : "Mitspieler",
+        userAvatar: p ? p.avatar : null,
+        confirmed: false,
+        confirmedAt: null
+      };
+    }) : [];
+
+    // Sofortige Punktevergabe:
+    // Bei Minuspunkten (Malus): sofort abziehen
+    // Bei Voting oder wartenden Zeugen: 0 (pending)
+    let initialPoints = 0;
+    if (actualPoints < 0) {
+      initialPoints = actualPoints;
+      player.points = Math.max(0, (player.points || 0) + actualPoints);
+    } else if (!requiresVoting && !requiresWitnessPending) {
+      initialPoints = actualPoints;
+      player.points = (player.points || 0) + actualPoints;
+    }
 
     if (!player.completedQuests.includes(questId)) {
       player.completedQuests.push(questId);
     }
-    if (!requiresVoting) {
-      player.points += initialPoints;
+
+    if (this.state.currentUser && this.state.currentUser.id === userId) {
+      this.state.currentUser.points = player.points;
+      this.state.currentUser.completedQuests = [...player.completedQuests];
+      if (player.gutGlaubenCount) this.state.currentUser.gutGlaubenCount = player.gutGlaubenCount;
     }
 
     // AUTOMATISCHE ACHTERBAHN-ZÄHLUNG FÜR DEN PARK-GUIDE
@@ -394,6 +853,29 @@ class AppStore {
       });
     }
 
+    let finalTitle = customTitle || quest.title;
+    if (selectedOutcome && !customTitle) {
+      finalTitle = `${quest.title} • ${selectedOutcome.label}`;
+    }
+
+    const payload = {
+      userId: userId,
+      questId: quest.id,
+      questTitle: finalTitle,
+      questDescription: customDesc || quest.description,
+      questIcon: quest.icon || "🎯",
+      points: actualPoints,
+      basePoints: basePoints,
+      selectedOutcome: selectedOutcome,
+      isFaithBased: isFaithBased,
+      witnesses: witnesses,
+      requiresWitnessPending: requiresWitnessPending,
+      requiresVoting: requiresVoting,
+      votingLabel: quest.votingLabel,
+      photoBase64: photoBase64 || null,
+      userComment: userComment || ""
+    };
+
     const localFeedItem = {
       id: "feed_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
       type: "quest",
@@ -405,15 +887,20 @@ class AppStore {
       questTitle: payload.questTitle,
       questDescription: payload.questDescription,
       questIcon: quest.icon || "🎯",
-      points: quest.points,
+      points: actualPoints,
+      basePoints: basePoints,
       actualPointsAwarded: initialPoints,
+      selectedOutcome: selectedOutcome,
+      isFaithBased: isFaithBased,
+      witnesses: witnesses,
+      witnessPending: requiresWitnessPending,
       photo: photoBase64 || null,
       userComment: userComment || "",
       timestamp: new Date().toISOString(),
       requiresVoting: requiresVoting,
       votingLabel: quest.votingLabel || "Leistung & Ausführung",
       votes: {},
-      votingUnlocked: !requiresVoting,
+      votingUnlocked: !requiresVoting && !requiresWitnessPending,
       reactions: { "🔥": [], "🍺": [], "👑": [], "💀": [], "👏": [] },
       comments: userComment ? [{
         id: "cmt_" + Date.now(),
@@ -446,7 +933,52 @@ class AppStore {
       console.warn("Offline gespeichert. Server nicht erreichbar.", e);
     }
 
+    this.checkAndAutoUnlockSideQuests(userId);
     return localFeedItem;
+  }
+
+  // --- ZEUGEN-BESTÄTIGUNG DURCH MITSPIELER ---
+  async confirmWitness(feedItemId, witnessUserId) {
+    const feedItem = this.state.feed.find(f => f.id === feedItemId);
+    if (!feedItem || !feedItem.witnesses) return;
+
+    const witness = feedItem.witnesses.find(w => w.userId === witnessUserId);
+    if (!witness || witness.confirmed) return;
+
+    witness.confirmed = true;
+    witness.confirmedAt = new Date().toISOString();
+
+    // Zeugen-Bedingung erfüllt: Schalte Punkte frei falls kein Voting mehr ansteht
+    if (feedItem.witnessPending && !feedItem.requiresVoting) {
+      feedItem.witnessPending = false;
+      feedItem.actualPointsAwarded = feedItem.points;
+      
+      const author = this.state.players.find(p => p.id === feedItem.userId);
+      if (author) {
+        author.points = (author.points || 0) + feedItem.points;
+        if (this.state.currentUser && this.state.currentUser.id === author.id) {
+          this.state.currentUser.points = author.points;
+        }
+      }
+    }
+
+    this.saveLocalState();
+    if (window.app) window.app.renderAllViews();
+    if (window.ProfileModule) window.ProfileModule.updateHeaderProfile();
+    if (window.GameAudio) window.GameAudio.playFanfare();
+    if (window.app && window.app.showToast) {
+      window.app.showToast(`👁️ Zeugen-Bestätigung erfolgreich erteilt!`);
+    }
+
+    try {
+      await fetch("/api/quest/confirm-witness", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ feedItemId, witnessUserId })
+      });
+    } catch (e) {
+      console.warn("Witness confirmation offline saved", e);
+    }
   }
 
   // --- FREIEN POST / SCHNAPPSCHUSS ERSTELLEN ---
@@ -454,8 +986,13 @@ class AppStore {
     const player = this.state.players.find(p => p.id === userId);
     if (!player) return null;
 
-    const points = 10;
-    player.points += points;
+    // 5 Punkte für reine Textnachricht, 10 Punkte für Foto/Video
+    const points = photoBase64 ? 10 : 5;
+    player.points = (player.points || 0) + points;
+
+    if (this.state.currentUser && this.state.currentUser.id === userId) {
+      this.state.currentUser.points = player.points;
+    }
 
     const payload = {
       userId: userId,
@@ -470,9 +1007,10 @@ class AppStore {
       userName: player.name,
       userAvatar: player.avatar,
       userHouse: player.house,
-      text: text || "Schnappschuss geteilt 📸",
+      text: text || (photoBase64 ? "Schnappschuss geteilt 📸" : "Status geteilt 📝"),
       photo: photoBase64 || null,
       points: points,
+      actualPointsAwarded: points,
       timestamp: new Date().toISOString(),
       reactions: { "🔥": [], "🍺": [], "👑": [], "💀": [], "👏": [] },
       comments: []
@@ -480,6 +1018,7 @@ class AppStore {
 
     this.state.feed.unshift(localFeedItem);
     this.saveLocalState();
+    if (window.ProfileModule) window.ProfileModule.updateHeaderProfile();
 
     try {
       const res = await fetch("/api/feed/post", {
@@ -520,23 +1059,8 @@ class AppStore {
       this.state.currentUser.drinksDetail = { ...player.drinksDetail };
     }
 
-    const feedItem = {
-      id: "feed_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
-      type: "drink",
-      userId: player.id,
-      userName: player.name,
-      userAvatar: player.avatar,
-      userHouse: player.house,
-      itemId: item.id,
-      itemName: item.name,
-      itemIcon: item.icon,
-      points: item.points,
-      timestamp: new Date().toISOString(),
-      reactions: { "🍻": [], "🔥": [], "💀": [] },
-      comments: []
-    };
-
-    this.state.feed.unshift(feedItem);
+    // Hinweis: Einzelne Drinks werden nicht mehr in den Live-Feed geschrieben,
+    // um den Feed sauber & übersichtlich für Quests & Schnappschüsse zu halten!
     this.saveLocalState();
 
     try {
@@ -553,7 +1077,8 @@ class AppStore {
       });
     } catch (e) {}
 
-    return feedItem;
+    this.checkAndAutoUnlockSideQuests(userId);
+    return null;
   }
 
   // --- VOTING ---
@@ -562,27 +1087,37 @@ class AppStore {
     if (!feedItem || !feedItem.requiresVoting) return;
 
     if (feedItem.userId === voterId) {
-      alert("Du kannst deine eigene Challenge nicht selbst bewerten 😉");
+      if (window.app && window.app.showToast) {
+        window.app.showToast("😉 Du kannst deine eigene Challenge nicht selbst bewerten!");
+      }
       return;
     }
 
-    feedItem.votes[voterId] = rating;
-    const totalPlayers = this.state.players.length;
+    if (!feedItem.votes) feedItem.votes = {};
+    feedItem.votes[voterId] = Number(rating);
+
+    const totalPlayers = (this.state.players || []).length;
     const eligibleVoters = Math.max(1, totalPlayers - 1);
     const voteCount = Object.keys(feedItem.votes).length;
     const votePercentage = (voteCount / eligibleVoters) * 100;
-    const sumRatings = Object.values(feedItem.votes).reduce((a, b) => a + b, 0);
+    const sumRatings = Object.values(feedItem.votes).reduce((a, b) => a + Number(b), 0);
     const avgRating = sumRatings / voteCount;
     const scoreFactor = avgRating / 5;
-    const calculatedPoints = Math.round(feedItem.points * scoreFactor);
+    const calculatedPoints = Math.round((feedItem.points || 0) * scoreFactor);
     const player = this.state.players.find(p => p.id === feedItem.userId);
 
     if (votePercentage >= 60) {
       feedItem.votingUnlocked = true;
+      feedItem.votingCompleted = true;
       const previousAwarded = feedItem.actualPointsAwarded || 0;
       const pointDiff = calculatedPoints - previousAwarded;
-      if (player) player.points += pointDiff;
+      if (player) {
+        player.points += pointDiff;
+      }
       feedItem.actualPointsAwarded = calculatedPoints;
+      if (this.state.currentUser && this.state.currentUser.id === feedItem.userId) {
+        this.state.currentUser.points = (player ? player.points : calculatedPoints);
+      }
     }
 
     feedItem.avgRating = avgRating.toFixed(1);
@@ -590,61 +1125,146 @@ class AppStore {
     feedItem.votePercentage = Math.round(votePercentage);
 
     this.saveLocalState();
+    if (window.app && window.app.showToast) {
+      window.app.showToast(`⭐ ${rating} Sterne für <strong>${feedItem.userName}</strong> gewertet!`);
+    }
 
     try {
-      await fetch("/api/vote", {
+      const res = await fetch("/api/vote", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ feedId, voterId, rating })
+        body: JSON.stringify({ feedId, voterId, rating: Number(rating) })
       });
+      if (res.ok) {
+        const json = await res.json();
+        const updatedItem = json.feedItem || json.item;
+        if (updatedItem) {
+          const idx = this.state.feed.findIndex(f => f.id === feedId);
+          if (idx >= 0) this.state.feed[idx] = updatedItem;
+          this.saveLocalState();
+        }
+      }
     } catch (e) {}
   }
 
-  // --- KOMMENTARE ---
-  async addComment(feedId, userId, text) {
+  async voteFeedItem(feedId, voterId, rating) {
+    return this.castVote(feedId, voterId, rating);
+  }
+
+  // --- KOMMENTARE & FOTO-ANTWORTEN ---
+  async addComment(feedId, userId, text, photoBase64 = null) {
     const feedItem = this.state.feed.find(f => f.id === feedId);
     const player = this.state.players.find(p => p.id === userId);
-    if (!feedItem || !player || !text.trim()) return;
+    if (!feedItem || !player) return;
+    if (!text && !photoBase64) return;
+
+    // 2 Punkte für Text-Kommentar, 5 Punkte für Foto-Antwort
+    const commentPoints = photoBase64 ? 5 : 2;
+    player.points = (player.points || 0) + commentPoints;
+
+    if (this.state.currentUser && this.state.currentUser.id === userId) {
+      this.state.currentUser.points = player.points;
+    }
 
     const comment = {
       id: "c_" + Date.now() + "_" + Math.random().toString(36).substr(2, 4),
       userId: player.id,
       userName: player.name,
       userAvatar: player.avatar,
-      text: text.trim(),
+      text: (text || "").trim(),
+      photo: photoBase64 || null,
+      points: commentPoints,
       timestamp: new Date().toISOString()
     };
 
     if (!feedItem.comments) feedItem.comments = [];
     feedItem.comments.push(comment);
     this.saveLocalState();
+    if (window.ProfileModule) window.ProfileModule.updateHeaderProfile();
+
+    if (window.app && window.app.showToast) {
+      if (photoBase64) {
+        window.app.showToast(`📸 +5 Punkte für deine Foto-Antwort!`);
+      } else {
+        window.app.showToast(`💬 +2 Punkte für deinen Kommentar!`);
+      }
+    }
 
     try {
-      await fetch("/api/comment", {
+      const res = await fetch("/api/comment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ feedId, userId, text })
+        body: JSON.stringify({ feedId, userId, text: comment.text, photoBase64 })
       });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.comment && json.comment.photo) {
+          comment.photo = json.comment.photo;
+          this.saveLocalState();
+        }
+      }
     } catch (e) {}
   }
 
-  // --- EMOJI REAKTIONEN ---
-  async toggleReaction(feedId, userId, emoji) {
+  // --- EMOJI REAKTIONEN (+5 PUNKTE FÜR DEN BEITRAGS-AUTOR) ---
+  async toggleReaction(feedId, arg2, arg3) {
     const feedItem = this.state.feed.find(f => f.id === feedId);
     if (!feedItem) return;
+
+    // Flexible Parametererkennung: (feedId, userId, emoji) oder (feedId, emoji, userId)
+    const emojiList = ["🔥", "🍺", "👑", "💀", "👏", "🍻", "🎉", "❤️", "👍"];
+    let emoji = "";
+    let userId = "";
+
+    if (emojiList.includes(arg2)) {
+      emoji = arg2;
+      userId = arg3;
+    } else if (emojiList.includes(arg3)) {
+      emoji = arg3;
+      userId = arg2;
+    } else {
+      userId = arg2;
+      emoji = arg3;
+    }
+
+    if (!emoji || !userId) return;
 
     if (!feedItem.reactions) feedItem.reactions = {};
     if (!feedItem.reactions[emoji]) feedItem.reactions[emoji] = [];
 
     const userList = feedItem.reactions[emoji];
     const idx = userList.indexOf(userId);
+    const postAuthor = this.state.players.find(p => p.id === feedItem.userId);
+
     if (idx >= 0) {
+      // Reaktion zurückziehen: -5 Punkte für den Beitrags-Ersteller
       userList.splice(idx, 1);
+      if (postAuthor) {
+        postAuthor.points = Math.max(0, (postAuthor.points || 0) - 5);
+        if (this.state.currentUser && this.state.currentUser.id === postAuthor.id) {
+          this.state.currentUser.points = postAuthor.points;
+        }
+      }
     } else {
+      // Neue Reaktion: +5 Punkte für den Beitrags-Ersteller
       userList.push(userId);
+      if (postAuthor) {
+        postAuthor.points = (postAuthor.points || 0) + 5;
+        if (this.state.currentUser && this.state.currentUser.id === postAuthor.id) {
+          this.state.currentUser.points = postAuthor.points;
+        }
+      }
+      if (window.app && window.app.showToast) {
+        if (feedItem.userId === userId) {
+          window.app.showToast(`${emoji} +5 Punkte für deinen Beitrag!`);
+        } else {
+          window.app.showToast(`${emoji} +5 Punkte an <strong>${feedItem.userName}</strong> vergeben!`);
+        }
+      }
     }
 
     this.saveLocalState();
+    if (window.ProfileModule) window.ProfileModule.updateHeaderProfile();
 
     try {
       await fetch("/api/reaction", {
