@@ -104,22 +104,30 @@ body {
   flex-shrink: 0;
 }
 
-/* Walibi W-Badge */
+/* Walibi Official W-Badge */
 .walibi-w-badge {
-  background: var(--gradient-red);
-  border: 2.5px solid var(--walibi-yellow);
-  color: #fff;
-  font-family: var(--font-headline);
-  font-size: 20px;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+  background: transparent;
+  border: none;
+  width: 42px;
+  height: 42px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 3px 0 rgba(0,0,0,0.6);
-  transform: rotate(-3deg);
-  text-shadow: 1px 2px 0 #000;
+  flex-shrink: 0;
+  padding: 0;
+  filter: drop-shadow(0 3px 6px rgba(0,0,0,0.6));
+  transition: transform 0.2s ease;
+}
+
+.walibi-w-badge:hover {
+  transform: scale(1.08) rotate(-2deg);
+}
+
+.walibi-w-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
 }
 
 .header-titles {
@@ -246,17 +254,17 @@ body {
 .mascot-hero-artwork-wrapper {
   position: relative;
   width: 100%;
-  height: 105px;
+  aspect-ratio: 16 / 9;
   overflow: hidden;
   background: #080b14;
-  transition: height 0.3s ease;
+  transition: all 0.3s ease;
 }
 
 .mascot-hero-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center top;
+  object-position: center center;
   display: block;
 }
 
@@ -1990,13 +1998,13 @@ body {
 }
 
 .bottom-nav-btn .nav-icon {
-  font-size: 22px;
+  font-size: 20px;
 }
 
 .bottom-nav-btn .nav-label {
   font-family: var(--font-headline);
-  font-size: 14px;
-  letter-spacing: 0.5px;
+  font-size: 11px;
+  letter-spacing: 0.3px;
   text-transform: uppercase;
 }
 
@@ -2005,7 +2013,7 @@ body {
 }
 
 .bottom-nav-btn.active .nav-icon {
-  transform: translateY(-3px);
+  transform: translateY(-2px);
 }
 
 /* --- MODALS GENERAL --- */
@@ -2519,4 +2527,85 @@ body {
   width: 20px;
   height: 20px;
   border-radius: 50%;
+}
+
+/* --- 10+ LUSTIGE AVATAR-PRESETS GRID --- */
+.avatar-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  max-height: 210px;
+  overflow-y: auto;
+  padding: 6px 2px;
+}
+
+.avatar-preset-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 4px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.avatar-preset-item:hover,
+.avatar-preset-item:active {
+  border-color: var(--walibi-yellow);
+  background: rgba(255, 204, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.avatar-preset-item.selected {
+  border-color: var(--walibi-yellow);
+  background: rgba(255, 204, 0, 0.25);
+  box-shadow: 0 0 12px rgba(255, 204, 0, 0.4);
+}
+
+.preset-avatar-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #fff;
+  margin-bottom: 4px;
+}
+
+.preset-avatar-name {
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--text-main);
+  text-align: center;
+  line-height: 1.1;
+  word-break: break-word;
+}
+
+/* --- VIDEO MEDIA IN FEED & QUESTS --- */
+.camera-preview-video {
+  width: 100%;
+  max-height: 220px;
+  border-radius: 12px;
+  background: #000;
+  border: 2px solid var(--walibi-yellow);
+  margin-top: 8px;
+}
+
+.feed-video-wrapper {
+  position: relative;
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  margin-top: 8px;
+}
+
+.feed-proof-video {
+  width: 100%;
+  max-height: 320px;
+  display: block;
+  border-radius: 10px;
+  background: #000;
 }

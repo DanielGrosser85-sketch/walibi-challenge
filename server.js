@@ -123,7 +123,11 @@ const MIME_TYPES = {
   '.jpeg': 'image/jpeg',
   '.gif': 'image/gif',
   '.svg': 'image/svg+xml',
-  '.ico': 'image/x-icon'
+  '.ico': 'image/x-icon',
+  '.mp4': 'video/mp4',
+  '.webm': 'video/webm',
+  '.mov': 'video/quicktime',
+  '.m4v': 'video/mp4'
 };
 
 // --- HTTP SERVER ---
@@ -154,17 +158,19 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 3. Uploads Bild-Auslieferung
+  // 3. Uploads Bild- & Video-Auslieferung
   if (pathname.startsWith('/uploads/')) {
     const filename = path.basename(pathname);
     const filePath = path.join(UPLOADS_DIR, filename);
     if (fs.existsSync(filePath)) {
-      res.writeHead(200, { 'Content-Type': 'image/jpeg' });
+      const ext = path.extname(filePath).toLowerCase();
+      const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+      res.writeHead(200, { 'Content-Type': contentType });
       fs.createReadStream(filePath).pipe(res);
       return;
     } else {
       res.writeHead(404, { 'Content-Type': 'text/plain' });
-      res.end('Bild nicht gefunden');
+      res.end('Datei nicht gefunden');
       return;
     }
   }
@@ -195,8 +201,8 @@ function parseJsonBody(req, callback) {
   let body = '';
   req.on('data', chunk => {
     body += chunk.toString();
-    // 15MB Limit für Bild-Uploads
-    if (body.length > 15 * 1024 * 1024) {
+    // 35MB Limit für Bild- & Video-Uploads
+    if (body.length > 35 * 1024 * 1024) {
       req.destroy();
     }
   });
@@ -208,6 +214,38 @@ function parseJsonBody(req, callback) {
       callback(e, null);
     }
   });
+}
+
+// Hilfsfunktion: Speichert Base64-Medien (Bilder & Videos) sicher im uploads/ Ordner
+function saveMediaBase64(base64Str, prefix = 'media') {
+  if (!base64Str || typeof base64Str !== 'string') return null;
+  if (!base64Str.startsWith('data:')) return base64Str; // Bereits eine URL
+
+  try {
+    const match = base64Str.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9\-\+\.]+);base64,(.+)$/);
+    if (!match) return null;
+
+    const mime = match[1].toLowerCase();
+    const dataBuffer = Buffer.from(match[2], 'base64');
+    let ext = 'jpg';
+
+    if (mime.includes('png')) ext = 'png';
+    else if (mime.includes('gif')) ext = 'gif';
+    else if (mime.includes('webp')) ext = 'webp';
+    else if (mime.includes('svg')) ext = 'svg';
+    else if (mime.includes('mp4')) ext = 'mp4';
+    else if (mime.includes('webm')) ext = 'webm';
+    else if (mime.includes('quicktime') || mime.includes('mov')) ext = 'mov';
+    else if (mime.includes('video')) ext = 'mp4';
+
+    const filename = `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 6)}.${ext}`;
+    const diskPath = path.join(UPLOADS_DIR, filename);
+    fs.writeFileSync(diskPath, dataBuffer);
+    return `/uploads/${filename}`;
+  } catch (e) {
+    console.error("Fehler beim Speichern der Mediendatei:", e);
+    return null;
+  }
 }
 
 // --- API ROUTER ---
@@ -237,7 +275,9 @@ function handleApiRequest(pathname, req, res) {
           avatar: data.avatar || null,
           points: 0,
           drinksCount: 0,
-          completedQuests: []
+          completedQuests: [],
+          rideCounts: {},
+          drinksDetail: { beer: 0, shot: 0, longdrink: 0, joint: 0, water: 0 }
         };
         db.players.push(p);
       } else {
@@ -246,22 +286,28 @@ function handleApiRequest(pathname, req, res) {
         if (data.avatar) p.avatar = data.avatar;
       }
 
+      // Speichere Avatar-Foto auf Festplatte, falls Base64 Upload
+      if (data.avatar && data.avatar.startsWith('data:image')) {
+        const savedUrl = saveMediaBase64(data.avatar, `avatar_${p.id}`);
+        if (savedUrl) p.avatar = savedUrl;
+      }
+
       if (data.house && !db.houses.includes(data.house)) {
         db.houses.push(data.house);
       }
 
-      // Aktualisiere Name & Avatar in bisherigen Posts
+      // Aktualisiere Name & Avatar in bisherigen Posts und Kommentaren
       db.feed.forEach(post => {
         if (post.userId === p.id) {
-          if (data.name) post.userName = data.name;
-          if (data.avatar) post.userAvatar = data.avatar;
-          if (data.house) post.userHouse = data.house;
+          if (p.name) post.userName = p.name;
+          if (p.avatar) post.userAvatar = p.avatar;
+          if (p.house) post.userHouse = p.house;
         }
         if (post.comments) {
           post.comments.forEach(c => {
             if (c.userId === p.id) {
-              if (data.name) c.userName = data.name;
-              if (data.avatar) c.userAvatar = data.avatar;
+              if (p.name) c.userName = p.name;
+              if (p.avatar) c.userAvatar = p.avatar;
             }
           });
         }
@@ -290,22 +336,11 @@ function handleApiRequest(pathname, req, res) {
         return;
       }
 
-      // Bild speichern falls Base64
+      // Foto oder Video auf Festplatte speichern falls Base64
       let photoUrl = data.photoBase64;
-      if (data.photoBase64 && data.photoBase64.startsWith('data:image')) {
-        try {
-          const match = data.photoBase64.match(/^data:image\/(\w+);base64,(.+)$/);
-          if (match) {
-            const ext = match[1] === 'jpeg' ? 'jpg' : match[1];
-            const buffer = Buffer.from(match[2], 'base64');
-            const filename = `quest_${Date.now()}_${Math.random().toString(36).substr(2, 6)}.${ext}`;
-            const diskPath = path.join(UPLOADS_DIR, filename);
-            fs.writeFileSync(diskPath, buffer);
-            photoUrl = `/uploads/${filename}`;
-          }
-        } catch (e) {
-          console.error("Fehler beim Speichern des Upload-Bildes", e);
-        }
+      if (data.photoBase64 && (data.photoBase64.startsWith('data:image') || data.photoBase64.startsWith('data:video'))) {
+        const savedUrl = saveMediaBase64(data.photoBase64, 'quest');
+        if (savedUrl) photoUrl = savedUrl;
       }
 
       const requiresVoting = data.requiresVoting === true;
@@ -340,6 +375,8 @@ function handleApiRequest(pathname, req, res) {
         });
       }
 
+      const isVideo = photoUrl && (photoUrl.endsWith('.mp4') || photoUrl.endsWith('.webm') || photoUrl.endsWith('.mov'));
+
       const feedItem = {
         id: "feed_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
         type: "quest",
@@ -354,6 +391,7 @@ function handleApiRequest(pathname, req, res) {
         points: data.points || 0,
         actualPointsAwarded: initialPoints,
         photo: photoUrl || null,
+        isVideo: isVideo,
         userComment: data.userComment || "",
         timestamp: new Date().toISOString(),
         requiresVoting: requiresVoting,
@@ -380,7 +418,7 @@ function handleApiRequest(pathname, req, res) {
     return;
   }
 
-  // POST /api/feed/post (Freier Social-Post / Schnappschuss)
+  // POST /api/feed/post (Freier Social-Post / Schnappschuss / Video)
   if (pathname === '/api/feed/post' && req.method === 'POST') {
     parseJsonBody(req, (err, data) => {
       if (err || !data.userId || (!data.text && !data.photoBase64)) {
@@ -397,22 +435,12 @@ function handleApiRequest(pathname, req, res) {
       }
 
       let photoUrl = null;
-      if (data.photoBase64 && data.photoBase64.startsWith('data:image')) {
-        try {
-          const match = data.photoBase64.match(/^data:image\/(\w+);base64,(.+)$/);
-          if (match) {
-            const ext = match[1] === 'jpeg' ? 'jpg' : match[1];
-            const buffer = Buffer.from(match[2], 'base64');
-            const filename = `post_${Date.now()}_${Math.random().toString(36).substr(2, 6)}.${ext}`;
-            const diskPath = path.join(UPLOADS_DIR, filename);
-            fs.writeFileSync(diskPath, buffer);
-            photoUrl = `/uploads/${filename}`;
-          }
-        } catch (e) {
-          console.error("Fehler beim Speichern des Post-Bildes", e);
-        }
+      if (data.photoBase64 && (data.photoBase64.startsWith('data:image') || data.photoBase64.startsWith('data:video'))) {
+        const savedUrl = saveMediaBase64(data.photoBase64, 'post');
+        if (savedUrl) photoUrl = savedUrl;
       }
 
+      const isVideo = photoUrl && (photoUrl.endsWith('.mp4') || photoUrl.endsWith('.webm') || photoUrl.endsWith('.mov'));
       const points = 10; // 10 Spaß-Punkte für spontane Gruppen-Posts!
       player.points += points;
 
@@ -423,8 +451,9 @@ function handleApiRequest(pathname, req, res) {
         userName: player.name,
         userAvatar: player.avatar,
         userHouse: player.house,
-        text: data.text || "Schnappschuss geteilt 📸",
+        text: data.text || (isVideo ? "Video geteilt 🎥" : "Schnappschuss geteilt 📸"),
         photo: photoUrl,
+        isVideo: isVideo,
         points: points,
         timestamp: new Date().toISOString(),
         reactions: { "🔥": [], "🍺": [], "👑": [], "💀": [], "👏": [] },

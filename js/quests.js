@@ -285,12 +285,17 @@ const QuestsModule = {
   removeCapturedPhoto() {
     this.capturedPhotoBase64 = null;
     const preview = document.getElementById("photoUploadPreview");
+    const videoPreview = document.getElementById("videoUploadPreview");
     const placeholder = document.getElementById("cameraPlaceholder");
     const removeBtn = document.getElementById("btnRemovePhoto");
 
     if (preview) {
       preview.classList.add("hidden");
       preview.src = "";
+    }
+    if (videoPreview) {
+      videoPreview.classList.add("hidden");
+      videoPreview.src = "";
     }
     if (placeholder) placeholder.classList.remove("hidden");
     if (removeBtn) removeBtn.classList.add("hidden");
@@ -314,42 +319,24 @@ const QuestsModule = {
 
     if (window.GameAudio) window.GameAudio.playClick();
 
+    const isVideo = file.type.startsWith('video/');
     const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
-        const maxDim = 900;
-        let width = img.width;
-        let height = img.height;
 
-        if (width > height) {
-          if (width > maxDim) {
-            height *= maxDim / width;
-            width = maxDim;
-          }
-        } else {
-          if (height > maxDim) {
-            width *= maxDim / height;
-            height = maxDim;
-          }
-        }
+    if (isVideo) {
+      // VIDEO AUFNAHME / AUSWAHL
+      reader.onload = (e) => {
+        const b64 = e.target.result;
+        this.capturedPhotoBase64 = b64;
 
-        canvas.width = width;
-        canvas.height = height;
-        ctx.drawImage(img, 0, 0, width, height);
-
-        const compressed = canvas.toDataURL("image/jpeg", 0.82);
-        this.capturedPhotoBase64 = compressed;
-
-        const preview = document.getElementById("photoUploadPreview");
+        const previewImg = document.getElementById("photoUploadPreview");
+        const previewVid = document.getElementById("videoUploadPreview");
         const placeholder = document.getElementById("cameraPlaceholder");
         const removeBtn = document.getElementById("btnRemovePhoto");
 
-        if (preview) {
-          preview.src = compressed;
-          preview.classList.remove("hidden");
+        if (previewImg) previewImg.classList.add("hidden");
+        if (previewVid) {
+          previewVid.src = b64;
+          previewVid.classList.remove("hidden");
         }
         if (placeholder) placeholder.classList.add("hidden");
         if (removeBtn) removeBtn.classList.remove("hidden");
@@ -361,9 +348,61 @@ const QuestsModule = {
           if (txt) txt.textContent = "🚀 MISSION ABSCHLIESSEN! 🚀";
         }
       };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
+      reader.readAsDataURL(file);
+    } else {
+      // FOTO AUFNAHME / KOMPRIMIERUNG
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+          const maxDim = 900;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > maxDim) {
+              height *= maxDim / width;
+              width = maxDim;
+            }
+          } else {
+            if (height > maxDim) {
+              width *= maxDim / height;
+              height = maxDim;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          ctx.drawImage(img, 0, 0, width, height);
+
+          const compressed = canvas.toDataURL("image/jpeg", 0.82);
+          this.capturedPhotoBase64 = compressed;
+
+          const previewImg = document.getElementById("photoUploadPreview");
+          const previewVid = document.getElementById("videoUploadPreview");
+          const placeholder = document.getElementById("cameraPlaceholder");
+          const removeBtn = document.getElementById("btnRemovePhoto");
+
+          if (previewVid) previewVid.classList.add("hidden");
+          if (previewImg) {
+            previewImg.src = compressed;
+            previewImg.classList.remove("hidden");
+          }
+          if (placeholder) placeholder.classList.add("hidden");
+          if (removeBtn) removeBtn.classList.remove("hidden");
+
+          const submitBtn = document.getElementById("btnSubmitQuest");
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            const txt = submitBtn.querySelector(".arcade-btn-text");
+            if (txt) txt.textContent = "🚀 MISSION ABSCHLIESSEN! 🚀";
+          }
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
   },
 
   submitQuestCompletion() {

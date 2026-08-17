@@ -5,6 +5,7 @@
 class AppStore {
   constructor() {
     this.STORAGE_KEY = "walibi_challenge_app_v1";
+    this.USER_KEY = "walibi_active_user_id";
     this.listeners = [];
     this.state = this.loadLocalState();
     this.apiAvailable = false;
@@ -58,67 +59,7 @@ class AppStore {
         }
       ],
       houses: ["Haus 1", "Haus 2", "Haus 3"],
-      feed: [
-        {
-          id: "feed_demo_1",
-          type: "quest",
-          userId: "p2",
-          userName: "Stefan",
-          userAvatar: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23ec4899'/><text x='50' y='60' font-size='40' text-anchor='middle' fill='white' font-family='sans-serif'>S</text></svg>",
-          userHouse: "Haus 2",
-          questId: "crazy_pose_ride",
-          questTitle: "Onride-Foto Pose-Master @ Untamed",
-          questDescription: "Schaffe es, auf dem offiziellen Blitz-Foto eine absolut epische Pose zu ziehen.",
-          questIcon: "📸",
-          points: 40,
-          actualPointsAwarded: 35,
-          photo: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 400'><rect width='600' height='400' fill='%231e1b4b'/><circle cx='300' cy='180' r='85' fill='%23ec4899'/><text x='300' y='195' font-size='75' text-anchor='middle' fill='white'>🤪</text><text x='300' y='320' font-size='22' font-weight='bold' text-anchor='middle' fill='%23fbbf24' font-family='sans-serif'>Stefan @ Untamed First Drop</text></svg>",
-          timestamp: new Date(Date.now() - 1000 * 60 * 18).toISOString(),
-          requiresVoting: true,
-          votingLabel: "Style & Pose Bewertung",
-          votes: { "p1": 5, "p3": 4, "p4": 5 },
-          votingUnlocked: true,
-          avgRating: "4.7",
-          voteCount: 3,
-          votePercentage: 100,
-          reactions: {
-            "🔥": ["p1", "p3"],
-            "👑": ["p1"],
-            "🍺": ["p4"],
-            "💀": [],
-            "👏": ["p3"]
-          },
-          comments: [
-            {
-              id: "c1",
-              userId: "p1",
-              userName: "Alex",
-              userAvatar: null,
-              text: "HARD GAAN! Sonnenbrille hat überlebt 😂🔥",
-              timestamp: new Date(Date.now() - 1000 * 60 * 12).toISOString()
-            }
-          ]
-        },
-        {
-          id: "feed_demo_2",
-          type: "drink",
-          userId: "p1",
-          userName: "Alex",
-          userAvatar: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23e11d48'/><text x='50' y='60' font-size='40' text-anchor='middle' fill='white' font-family='sans-serif'>A</text></svg>",
-          userHouse: "Haus 1",
-          itemId: "beer",
-          itemName: "Bier / Radler",
-          itemIcon: "🍺",
-          points: 5,
-          timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
-          reactions: {
-            "🍻": ["p2", "p4"],
-            "🔥": [],
-            "💀": []
-          },
-          comments: []
-        }
-      ],
+      feed: [],
       rulesAccepted: false,
       quests: window.DEFAULT_QUESTS || [],
       counterItems: window.COUNTER_ITEMS || []
@@ -128,19 +69,53 @@ class AppStore {
   loadLocalState() {
     try {
       const data = localStorage.getItem(this.STORAGE_KEY);
+      const savedUserId = localStorage.getItem(this.USER_KEY);
+
       if (data) {
-        parsed.quests = window.DEFAULT_QUESTS || [];
-        parsed.counterItems = window.COUNTER_ITEMS || [];
-        return parsed;
+        const parsed = JSON.parse(data);
+        if (parsed && typeof parsed === "object") {
+          parsed.quests = window.DEFAULT_QUESTS || [];
+          parsed.counterItems = window.COUNTER_ITEMS || [];
+          if (!Array.isArray(parsed.players)) parsed.players = this.getDefaultState().players;
+          if (!Array.isArray(parsed.houses)) parsed.houses = ["Haus 1", "Haus 2", "Haus 3"];
+          if (!Array.isArray(parsed.feed)) parsed.feed = [];
+
+          // Aktiven Benutzer über User-Key wiederherstellen
+          if (savedUserId) {
+            const found = parsed.players.find(p => p.id === savedUserId);
+            if (found) {
+              parsed.currentUser = found;
+            } else if (parsed.currentUser && parsed.currentUser.id === savedUserId) {
+              // parsed.currentUser beibehalten
+            } else {
+              parsed.currentUser = null;
+            }
+          } else if (parsed.currentUser && parsed.currentUser.id) {
+            localStorage.setItem(this.USER_KEY, parsed.currentUser.id);
+          } else {
+            parsed.currentUser = null;
+          }
+
+          return parsed;
+        }
       }
     } catch (e) {
       console.error("Fehler beim Laden aus localStorage", e);
     }
-    return this.getDefaultState();
+
+    const defaultState = this.getDefaultState();
+    const savedUserId = localStorage.getItem(this.USER_KEY);
+    if (savedUserId && defaultState.players) {
+      defaultState.currentUser = defaultState.players.find(p => p.id === savedUserId) || null;
+    }
+    return defaultState;
   }
 
   saveLocalState() {
     try {
+      if (this.state.currentUser && this.state.currentUser.id) {
+        localStorage.setItem(this.USER_KEY, this.state.currentUser.id);
+      }
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.state));
       this.notifyListeners();
     } catch (e) {
@@ -202,6 +177,11 @@ class AppStore {
           } else if (data.type === "GAME_ENDED") {
             if (data.state) this.mergeServerState(data.state);
             if (window.AwardsModule) window.AwardsModule.openCelebrationModal();
+          } else if (data.type === "GAME_STARTED") {
+            if (data.state) this.mergeServerState(data.state);
+            if (window.app && window.app.showToast) {
+              window.app.showToast("🚀 Das Spiel wurde gestartet / reaktiviert!");
+            }
           }
         } catch (err) {}
       };
@@ -215,17 +195,26 @@ class AppStore {
   mergeServerState(serverDb) {
     if (!serverDb) return;
 
-    const currentUserId = this.state.currentUser ? this.state.currentUser.id : null;
+    const savedUserId = localStorage.getItem(this.USER_KEY) || (this.state.currentUser ? this.state.currentUser.id : null);
 
-    this.state.players = serverDb.players || this.state.players;
-    this.state.houses = serverDb.houses || this.state.houses;
-    this.state.feed = Array.isArray(serverDb.feed) ? serverDb.feed : [];
-    if (serverDb.gameStatus) this.state.gameStatus = serverDb.gameStatus;
+    if (Array.isArray(serverDb.players)) {
+      this.state.players = serverDb.players;
+    }
+    if (Array.isArray(serverDb.houses)) {
+      this.state.houses = serverDb.houses;
+    }
+    if (Array.isArray(serverDb.feed)) {
+      this.state.feed = serverDb.feed;
+    }
+    if (serverDb.gameStatus) {
+      this.state.gameStatus = serverDb.gameStatus;
+    }
 
-    if (currentUserId) {
-      const myUpdated = this.state.players.find(p => p.id === currentUserId);
+    // Eigenen aktiven Nutzer sicherstellen
+    if (savedUserId) {
+      const myUpdated = this.state.players.find(p => p.id === savedUserId);
       if (myUpdated) {
-        this.state.currentUser = { ...this.state.currentUser, ...myUpdated };
+        this.state.currentUser = { ...myUpdated };
       }
     }
 
@@ -236,15 +225,19 @@ class AppStore {
 
   // --- BENUTZER & PROFIL ---
   async setCurrentUser(user) {
+    if (!user) {
+      this.state.currentUser = null;
+      localStorage.removeItem(this.USER_KEY);
+      this.saveLocalState();
+      return;
+    }
     this.state.currentUser = user;
+    localStorage.setItem(this.USER_KEY, user.id);
+    this.saveLocalState();
     this.updateProfile(user.id, user);
   }
 
   async updateProfile(userId, updates) {
-    if (this.state.currentUser && this.state.currentUser.id === userId) {
-      this.state.currentUser = { ...this.state.currentUser, ...updates };
-    }
-
     const idx = this.state.players.findIndex(p => p.id === userId);
     if (idx >= 0) {
       this.state.players[idx] = { ...this.state.players[idx], ...updates };
@@ -256,22 +249,61 @@ class AppStore {
         avatar: updates.avatar || null,
         points: 0,
         drinksCount: 0,
-        completedQuests: []
+        completedQuests: [],
+        rideCounts: {},
+        drinksDetail: { beer: 0, shot: 0, longdrink: 0, joint: 0, water: 0 }
       });
+    }
+
+    if (this.state.currentUser && this.state.currentUser.id === userId) {
+      const p = this.state.players.find(x => x.id === userId);
+      this.state.currentUser = { ...p };
     }
 
     if (updates.house && !this.state.houses.includes(updates.house)) {
       this.state.houses.push(updates.house);
     }
 
+    // Name & Avatar auch in lokalen Feed-Posts direkt anpassen
+    if (Array.isArray(this.state.feed)) {
+      this.state.feed.forEach(post => {
+        if (post.userId === userId) {
+          if (updates.name) post.userName = updates.name;
+          if (updates.avatar) post.userAvatar = updates.avatar;
+          if (updates.house) post.userHouse = updates.house;
+        }
+        if (post.comments) {
+          post.comments.forEach(c => {
+            if (c.userId === userId) {
+              if (updates.name) c.userName = updates.name;
+              if (updates.avatar) c.userAvatar = updates.avatar;
+            }
+          });
+        }
+      });
+    }
+
     this.saveLocalState();
 
     try {
-      await fetch("/api/player/update", {
+      const res = await fetch("/api/player/update", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: userId, ...updates })
       });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.player) {
+          const pIdx = this.state.players.findIndex(p => p.id === userId);
+          if (pIdx >= 0) {
+            this.state.players[pIdx] = { ...this.state.players[pIdx], ...json.player };
+          }
+          if (this.state.currentUser && this.state.currentUser.id === userId) {
+            this.state.currentUser = { ...this.state.currentUser, ...json.player };
+          }
+          this.saveLocalState();
+        }
+      }
     } catch (e) {}
   }
 

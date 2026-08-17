@@ -60,6 +60,8 @@ class MainApp {
       window.FeedModule.renderFeed();
     } else if (tabName === "quests" && window.QuestsModule) {
       window.QuestsModule.renderQuests();
+    } else if (tabName === "attractions" && window.ParkGuideModule) {
+      window.ParkGuideModule.render();
     } else if (tabName === "leaderboard" && window.LeaderboardModule) {
       window.LeaderboardModule.renderLeaderboard();
     }
@@ -74,6 +76,7 @@ class MainApp {
       if (this.currentTab === "feed") window.FeedModule.renderFeed();
     }
     if (this.currentTab === "quests" && window.QuestsModule) window.QuestsModule.renderQuests();
+    if (this.currentTab === "attractions" && window.ParkGuideModule) window.ParkGuideModule.render();
     if (this.currentTab === "leaderboard" && window.LeaderboardModule) window.LeaderboardModule.renderLeaderboard();
   }
 
@@ -97,10 +100,11 @@ class MainApp {
     toast.innerHTML = message;
     container.appendChild(toast);
 
+    // Verlängerte Anzeigedauer (6,5 Sekunden) damit Sprüche & Infos bequem gelesen werden können
     setTimeout(() => {
       toast.classList.add("fade-out");
       setTimeout(() => toast.remove(), 300);
-    }, 2800);
+    }, 6500);
   }
 
   // --- STRIKT ABWECHSELNDE MASKOTTCHEN SPRÜCHE ROTATION (1x FRED -> 1x WALIBI -> 1x GROSSER) ---
@@ -132,11 +136,12 @@ class MainApp {
       { speaker: "fox", name: "Großer (Spaß-Diktator)", icon: "🧢", text: '"Mein Zeitplan ist Gesetz: Frühstücken, Coaster ballern, Grillen, Abriss!"' }
     ];
 
+    // Angenehme Rotationsdauer (9,0 Sekunden)
     setInterval(() => {
       this.mascotQuoteIndex = (this.mascotQuoteIndex + 1) % quotes.length;
       const q = quotes[this.mascotQuoteIndex];
       this.setSpeakerQuote(q.speaker, q.name, q.icon, q.text);
-    }, 4500);
+    }, 9000);
   }
 
   setSpeakerQuote(speakerType, name, icon, text) {
@@ -208,6 +213,68 @@ class MainApp {
     this.showToast(`${target.badge} ${target.name}: "${randomQuote}"`);
   }
 
+  // --- MASKOTTCHEN HERO BANNER EIN-/AUSKLAPPEN ---
+  toggleMascotHero() {
+    if (window.GameAudio) window.GameAudio.playClick();
+    const card = document.getElementById("mascotHeroCard");
+    const toggleBtn = document.getElementById("mascotToggleBtn");
+    if (!card) return;
+
+    const isCollapsed = card.classList.toggle("collapsed");
+    if (toggleBtn) {
+      toggleBtn.textContent = isCollapsed ? "▼" : "▲";
+      toggleBtn.title = isCollapsed ? "Banner aufklappen" : "Banner zuklappen";
+    }
+    localStorage.setItem("walibi_mascot_collapsed", isCollapsed ? "1" : "0");
+  }
+
+  openQuickMenu() {
+    if (window.GameAudio) window.GameAudio.playClick();
+    const modal = document.getElementById("quickMenuModal");
+    if (!modal) return;
+    
+    // Admin Button im Quick Menu prüfen – NUR für echten Admin grossek
+    const adminBtn = document.getElementById("menuAdminBtn");
+    if (adminBtn) {
+      const isGrossek = window.ProfileModule && window.ProfileModule.isAdminUser && window.ProfileModule.isAdminUser();
+      adminBtn.style.display = isGrossek ? "flex" : "none";
+    }
+
+    // Sound Status aktualisieren
+    const soundLbl = document.getElementById("menuSoundLabel");
+    const soundIcon = document.getElementById("menuSoundIcon");
+    if (soundLbl && window.GameAudio) {
+      soundLbl.textContent = window.GameAudio.enabled ? "Sound: AN" : "Sound: AUS";
+      if (soundIcon) soundIcon.textContent = window.GameAudio.enabled ? "🔊" : "🔇";
+    }
+
+    modal.classList.remove("hidden");
+  }
+
+  closeQuickMenu() {
+    const modal = document.getElementById("quickMenuModal");
+    if (modal) modal.classList.add("hidden");
+  }
+
+  toggleSoundFromMenu() {
+    if (window.GameAudio) {
+      window.GameAudio.enabled = !window.GameAudio.enabled;
+      if (window.GameAudio.enabled) window.GameAudio.playClick();
+      const soundLbl = document.getElementById("menuSoundLabel");
+      const soundIcon = document.getElementById("menuSoundIcon");
+      if (soundLbl) soundLbl.textContent = window.GameAudio.enabled ? "Sound: AN" : "Sound: AUS";
+      if (soundIcon) soundIcon.textContent = window.GameAudio.enabled ? "🔊" : "🔇";
+      this.showToast(window.GameAudio.enabled ? "🔊 Soundeffekte aktiviert" : "🔇 Sound stummgeschaltet");
+    }
+  }
+
+  toggleWakeLockFromMenu() {
+    if (window.ProfileModule) {
+      window.ProfileModule.toggleWakeLock();
+      this.closeQuickMenu();
+    }
+  }
+
   fireConfetti() {
     const canvas = document.createElement("canvas");
     canvas.id = "confettiCanvas";
@@ -272,4 +339,10 @@ class MainApp {
 window.app = new MainApp();
 document.addEventListener("DOMContentLoaded", () => {
   window.app.init();
+  if (localStorage.getItem("walibi_mascot_collapsed") === "1") {
+    const card = document.getElementById("mascotHeroCard");
+    const toggleBtn = document.getElementById("mascotToggleBtn");
+    if (card) card.classList.add("collapsed");
+    if (toggleBtn) toggleBtn.textContent = "▼";
+  }
 });

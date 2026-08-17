@@ -59,8 +59,8 @@ window.DEFAULT_RULES = [
     badge: "👑 FINALE",
     color: "#eab308",
     icon: "👑",
-    title: "Die Krönung um 24:00 Uhr",
-    desc: "Um exakt 24:00 Uhr endet die offizielle Wertung. Wer ganz oben auf dem Treppchen steht, wird feierlich mit Krone zu 'Mr. oder Mrs. Walibi '26' gekrönt!",
+    title: "Die Krönung & Siegerehrung",
+    desc: "Wenn die Tour zu Ende geht, löst der Admin das Finale und die Siegerehrung aus. Wer ganz oben auf dem Treppchen steht, wird feierlich mit Krone zu 'Mr. oder Mrs. Walibi '26' gekrönt!",
     penalty: "🏆 Der Sieger genießt ewigen Ruhm & Respekt!"
   }
 ];

@@ -22,7 +22,7 @@ window.WALIBI_ATTRACTIONS = [
     capacity: "850 Pers / Std",
     minHeight: "120 cm",
     badge: "Neuheit: Dueling Chill",
-    illustration: "assets/walibi_festival_poster_bg.jpg",
+    illustration: "assets/attr_yoy_chill.jpg",
     desc: "Die grüne Spur von YOY! Geschmeidiger Flow, geniale Near-Miss Dueling-Momente mit dem Thrill-Zug und wellenförmige Airtime-Hügel."
   },
   {
@@ -41,7 +41,7 @@ window.WALIBI_ATTRACTIONS = [
     capacity: "850 Pers / Std",
     minHeight: "130 cm",
     badge: "Neuheit: Dueling Thrill",
-    illustration: "assets/walibi_comic_bg.jpg",
+    illustration: "assets/attr_yoy_thrill.jpg",
     desc: "Die violett-rote Spur von YOY! 4 wuchtige Inversionen, Zero-G Stall und waghalsige Überkopf-Duelle über den Köpfen der Zuschauer."
   },
 
@@ -119,7 +119,7 @@ window.WALIBI_ATTRACTIONS = [
     capacity: "1.000 Pers / Std",
     minHeight: "120 cm",
     badge: "Katapult-Horror",
-    illustration: "assets/walibi_comic_bg.jpg",
+    illustration: "assets/attr_xpress.jpg",
     desc: "Katapultstart aus dem Stand in einen U-Bahn-Tunnel mit 3 Überschlägen und spektakulärer Grusel-Atmosphäre."
   },
   {
@@ -138,7 +138,7 @@ window.WALIBI_ATTRACTIONS = [
     capacity: "760 Pers / Std",
     minHeight: "120 cm",
     badge: "Vorwärts & Rückwärts",
-    illustration: "assets/walibi_festival_poster_bg.jpg",
+    illustration: "assets/attr_speed_of_sound.jpg",
     desc: "Rast vorwärts durch Looping und Cobra Roll den zweiten Turm hoch – und fährt dann die gesamte Strecke rückwärts nochmal!"
   },
   {
@@ -157,7 +157,7 @@ window.WALIBI_ATTRACTIONS = [
     capacity: "900 Pers / Std",
     minHeight: "140 cm",
     badge: "Beine baumeln lassen",
-    illustration: "assets/walibi_comic_bg.jpg",
+    illustration: "assets/attr_condor.jpg",
     desc: "Frei hängende Sitze unter der Schiene: Die Beine baumeln im Wind bei 5 Inversionen (Roll Over, Sidewinder & Double In-Line Twist)."
   },
   {
@@ -176,7 +176,7 @@ window.WALIBI_ATTRACTIONS = [
     capacity: "600 Pers / Std",
     minHeight: "90 cm",
     badge: "Neu 2023",
-    illustration: "assets/walibi_festival_poster_bg.jpg",
+    illustration: "assets/attr_eat_my_dust.jpg",
     desc: "Rasantes Offroad-Rennen in Quad-Fahrzeugen mit dynamischen Kurven und spaßigen Wellen."
   },
   {
@@ -195,7 +195,7 @@ window.WALIBI_ATTRACTIONS = [
     capacity: "800 Pers / Std",
     minHeight: "90 cm",
     badge: "Pegel-Warmup",
-    illustration: "assets/walibi_comic_bg.jpg",
+    illustration: "assets/attr_drako.jpg",
     desc: "Zwei flotte Runden mit dem bunten Drachenzug – perfekt zum Vorglühen und Punkte-Sammeln!"
   },
 
@@ -216,7 +216,7 @@ window.WALIBI_ATTRACTIONS = [
     capacity: "1.000 Pers / Std",
     minHeight: "105 cm",
     badge: "Wildwasser-Action",
-    illustration: "assets/walibi_festival_poster_bg.jpg",
+    illustration: "assets/attr_crazy_river.jpg",
     desc: "Baumstamm-Rundfahrt mit drei Abfahrten, Rückwärts-Rutsche und garantiert nassen Haaren!"
   },
   {
@@ -235,7 +235,7 @@ window.WALIBI_ATTRACTIONS = [
     capacity: "1.200 Pers / Std",
     minHeight: "90 cm",
     badge: "Wellen-Chaos",
-    illustration: "assets/walibi_comic_bg.jpg",
+    illustration: "assets/attr_el_rio_grande.jpg",
     desc: "Runde 6er-Boote im reißenden Gebirgsfluss. Wer auf der falschen Seite sitzt, wird klatschnass!"
   },
 
@@ -256,7 +256,7 @@ window.WALIBI_ATTRACTIONS = [
     capacity: "600 Pers / Std",
     minHeight: "130 cm",
     badge: "60m Katapult",
-    illustration: "assets/walibi_festival_poster_bg.jpg",
+    illustration: "assets/attr_space_shot.jpg",
     desc: "Explosiver Raketenstart senkrecht nach oben mit fantastischem Rundumblick über Flevoland!"
   },
   {
@@ -275,7 +275,7 @@ window.WALIBI_ATTRACTIONS = [
     capacity: "700 Pers / Std",
     minHeight: "140 cm",
     badge: "Looping-Schaukel",
-    illustration: "assets/walibi_comic_bg.jpg",
+    illustration: "assets/attr_blast.jpg",
     desc: "Frei schwingende Sitzbank mit wilden Überschlägen knapp über den Wasserfontänen."
   },
   {
@@ -294,7 +294,7 @@ window.WALIBI_ATTRACTIONS = [
     capacity: "650 Pers / Std",
     minHeight: "140 cm",
     badge: "3D-Kreisel",
-    illustration: "assets/walibi_festival_poster_bg.jpg",
+    illustration: "assets/attr_excalibur.jpg",
     desc: "Freie 3D-Rotationsarme sorgen für unvorhersehbare G-Kräfte und puren Drehwurm."
   },
   {
@@ -313,7 +313,7 @@ window.WALIBI_ATTRACTIONS = [
     capacity: "800 Pers / Std",
     minHeight: "120 cm",
     badge: "Ohne Bügel",
-    illustration: "assets/walibi_comic_bg.jpg",
+    illustration: "assets/attr_g_force.jpg",
     desc: "Nur durch die Fliehkraft in den Sitz gedrückt werden – ganz ohne Sicherheitsbügel überkopf!"
   },
   {
@@ -370,7 +370,7 @@ window.WALIBI_ATTRACTIONS = [
     capacity: "600 Pers / Std",
     minHeight: "120 cm",
     badge: "Western-Schaukel",
-    illustration: "assets/walibi_comic_bg.jpg",
+    illustration: "assets/attr_tomahawk.jpg",
     desc: "Schwingt bis zu 120 Grad hoch in die Luft, während sich der Teller ununterbrochen dreht."
   },
   {

@@ -12,10 +12,11 @@
   <div class="app-container">
 
     <!-- HEADER / GAME HUD BAR -->
-    <!-- HEADER / GAME HUD BAR -->
     <header class="app-header">
       <div class="header-brand">
-        <div class="walibi-w-badge">W</div>
+        <div class="walibi-w-badge" title="Walibi '26">
+          <img src="assets/walibi_official_w.svg" alt="Walibi" class="walibi-w-img" />
+        </div>
         <div class="header-titles">
           <h1 class="brand-main-title">WALIBI</h1>
           <span class="brand-subtitle-tag">'26 🍺</span>
@@ -33,8 +34,10 @@
 
       <div class="header-actions">
         <button class="icon-btn" id="btnAdminPanel" onclick="ProfileModule.openAdminModal()" title="👑 Admin-Konsole (grossek)" style="display: none; border-color: var(--walibi-yellow); background: rgba(255,204,0,0.25);">👑</button>
-        <button class="icon-btn" id="btnEditProfile" onclick="ProfileModule.openMyProfileModal()" title="Spieler-Eigenschaften">⚙️</button>
-        <button class="icon-btn btn-menu-accent" id="btnQuickMenuTrigger" onclick="app.openQuickMenu()" title="Menü & Werkzeuge">⚡</button>
+        <button class="icon-btn" id="btnHeaderSchedule" onclick="ProfileModule.openScheduleModal()" title="⏰ Samstag-Zeitplan">⏰</button>
+        <button class="icon-btn" id="btnHeaderRules" onclick="ProfileModule.openRulesModal()" title="📜 Offizielle Regeln & Kodex">📜</button>
+        <button class="icon-btn" id="btnEditProfile" onclick="ProfileModule.openMyProfileModal()" title="⚙️ Spieler-Eigenschaften & Avatare">⚙️</button>
+        <button class="icon-btn btn-menu-accent" id="btnQuickMenuTrigger" onclick="app.openQuickMenu()" title="⚡ Menü & Werkzeuge">⚡</button>
       </div>
     </header>
 
@@ -128,7 +131,17 @@
       </div>
     </main>
 
-    <!-- MAIN VIEW 3: RANGLISTE / LEADERBOARD -->
+    <!-- MAIN VIEW 3: ATTRAKTIONEN & PARK-GUIDE -->
+    <main id="view_attractions" class="app-view">
+      <div class="section-header">
+        <h2 class="section-title">🎢 Walibi Park-Guide & Coaster-Counter</h2>
+      </div>
+      <div id="view_attractions_content">
+        <!-- Gefüllt per JS (ParkGuideModule) -->
+      </div>
+    </main>
+
+    <!-- MAIN VIEW 4: RANGLISTE / LEADERBOARD -->
     <main id="view_leaderboard" class="app-view">
       <div class="section-header">
         <h2 class="section-title">🏆 Live-Rangliste</h2>
@@ -152,7 +165,7 @@
       <span>Schnellzähler</span>
     </button>
 
-    <!-- BOTTOM NAVIGATION -->
+    <!-- BOTTOM NAVIGATION (4 TABS) -->
     <nav class="bottom-nav-bar">
       <button class="bottom-nav-btn active" data-tab="feed">
         <span class="nav-icon">📸</span>
@@ -161,6 +174,10 @@
       <button class="bottom-nav-btn" data-tab="quests">
         <span class="nav-icon">🎯</span>
         <span class="nav-label">Aufgaben</span>
+      </button>
+      <button class="bottom-nav-btn" data-tab="attractions">
+        <span class="nav-icon">🎢</span>
+        <span class="nav-label">Attraktionen</span>
       </button>
       <button class="bottom-nav-btn" data-tab="leaderboard">
         <span class="nav-icon">🏆</span>
@@ -186,21 +203,22 @@
         <textarea id="socialPostTextInput" class="form-textarea" placeholder="z. B. Grill-Pause läuft! / Wer traut sich auf Goliath?"></textarea>
       </div>
 
-      <!-- Foto Upload / Kamera -->
+      <!-- Foto / Video Upload / Kamera -->
       <div class="form-group">
-        <label class="form-label">Foto hinzufügen (Optional)</label>
+        <label class="form-label">Foto / Video hinzufügen (Optional)</label>
         <div style="display: flex; gap: 8px; margin-bottom: 8px;">
           <label class="btn-game-camera" style="flex: 1; text-align: center; justify-content: center; cursor: pointer;">
-            📷 Foto aufnehmen
-            <input type="file" accept="image/*" capture="environment" id="socialCameraInput" style="display: none;" />
+            📷 Foto / Video
+            <input type="file" accept="image/*,video/*" capture="environment" id="socialCameraInput" style="display: none;" />
           </label>
           <label class="btn-game-gallery" style="flex: 1; text-align: center; justify-content: center; cursor: pointer;">
-            🖼️ Aus Galerie
-            <input type="file" accept="image/*" id="socialGalleryInput" style="display: none;" />
+            🖼️ Galerie
+            <input type="file" accept="image/*,video/*" id="socialGalleryInput" style="display: none;" />
           </label>
         </div>
         <img id="socialPhotoPreview" class="camera-preview-img hidden" alt="Vorschau" />
-        <button id="btnRemoveSocialPhoto" class="btn-primary hidden" onclick="FeedModule.removeSocialPhotoPreview()" style="background: #475569; padding: 6px 10px; font-size: 11px; margin-top: 4px;">Foto entfernen</button>
+        <video id="socialVideoPreview" class="camera-preview-video hidden" controls playsinline></video>
+        <button id="btnRemoveSocialPhoto" class="btn-primary hidden" onclick="FeedModule.removeSocialPhotoPreview()" style="background: #475569; padding: 6px 10px; font-size: 11px; margin-top: 4px;">Medien entfernen</button>
       </div>
 
       <button class="btn-primary" id="btnSubmitSocialPost">🚀 In den Feed posten (+10 Pkt)</button>
@@ -255,9 +273,9 @@
       </div>
 
       <div style="background: rgba(255,204,0,0.12); border: 2px solid var(--walibi-yellow); padding: 12px; border-radius: 12px; margin-bottom: 14px; text-align: center;">
-        <span style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Aktueller Status & Zeitfenster</span>
+        <span style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Aktueller Status & Steuerung</span>
         <div id="adminGameStatusText" style="font-size: 17px; font-weight: 900; color: #34d399; margin: 4px 0;">🟢 SPIEL AKTIV (LÄUFT)</div>
-        <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">Offiziell: <strong>12.09.2026 (00:00 - 24:00 Uhr)</strong></div>
+        <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">Tour-Tag: <strong>12.09.2026</strong> • Manuelles Spielende durch Admin</div>
         
         <div style="display: flex; gap: 6px; flex-direction: column;">
           <button type="button" class="btn-primary" onclick="ProfileModule.adminEndGame()" style="background: var(--gradient-gold); color: #000; font-weight: 900; border: 2px solid #fff; font-size: 14px;">
@@ -319,9 +337,9 @@
           <img id="myProfileAvatarPreview" src="assets/mascot_hard_gaan.jpg" class="header-avatar" style="width: 84px; height: 84px; border: 3.5px solid var(--walibi-yellow); box-shadow: 0 0 16px rgba(255,204,0,0.5);" />
         </div>
         
-        <div style="display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-bottom: 4px;">
+        <div style="display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-bottom: 8px;">
           <label class="btn-primary" style="padding: 6px 12px; font-size: 11px; cursor: pointer; background: var(--gradient-red); width: auto;">
-            📸 Selfie
+            📸 Eigenes Selfie
             <input type="file" accept="image/*" capture="user" id="editProfileCameraInput" style="display: none;" />
           </label>
           <label class="btn-primary" style="padding: 6px 12px; font-size: 11px; cursor: pointer; background: #334155; width: auto;">
@@ -330,12 +348,10 @@
           </label>
         </div>
 
-        <!-- MASKOTTCHEN SCHNELLAUSWAHL -->
-        <div style="display: flex; gap: 8px; margin-top: 6px; align-items: center;">
-          <span style="font-size: 10px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Oder Avatar:</span>
-          <img src="assets/mascot_hard_gaan.jpg" style="width: 28px; height: 28px; border-radius: 50%; cursor: pointer; border: 1.5px solid #fff;" onclick="ProfileModule.setQuickAvatar('assets/mascot_hard_gaan.jpg')" title="Freikörper-Fred" />
-          <img src="assets/mascot_kangaroo.jpg" style="width: 28px; height: 28px; border-radius: 50%; cursor: pointer; border: 1.5px solid #fff;" onclick="ProfileModule.setQuickAvatar('assets/mascot_kangaroo.jpg')" title="Monsieur Walibi" />
-          <img src="assets/mascot_fox.jpg" style="width: 28px; height: 28px; border-radius: 50%; cursor: pointer; border: 1.5px solid #fff;" onclick="ProfileModule.setQuickAvatar('assets/mascot_fox.jpg')" title="Großer" />
+        <!-- 10+ LUSTIGE AVATARE ZUR SCHNELLAUSWAHL -->
+        <div style="width: 100%; margin-top: 4px;">
+          <div style="font-size: 11px; font-weight: 800; color: var(--walibi-yellow); text-transform: uppercase; margin-bottom: 6px; text-align: center;">Oder wähle einen Kult-Avatar:</div>
+          <div id="myProfileAvatarPresetGrid" class="avatar-preset-grid"></div>
         </div>
       </div>
 
@@ -369,6 +385,16 @@
             <div style="font-size: 10px; color: var(--text-muted); font-weight: 800; text-transform: uppercase;">🍺 Pegel-Stand</div>
             <div id="myProfileDrinksCount" style="font-size: 17px; font-weight: 900; color: #f43f5e;">0 Drinks</div>
           </div>
+        </div>
+
+        <!-- DISPLAY- & VOLLBILD-BUTTONS FÜR ALLE SPIELER -->
+        <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+          <button type="button" class="btn-primary" onclick="ProfileModule.toggleFullscreen()" style="flex: 1; padding: 9px 12px; font-size: 12px; background: #1e3a8a; border: 1.5px solid #60a5fa; color: #fff; font-weight: 800;">
+            ⛶ Vollbild-Modus
+          </button>
+          <button type="button" class="btn-primary" onclick="ProfileModule.toggleWakeLock()" style="flex: 1; padding: 9px 12px; font-size: 12px; background: #0f766e; border: 1.5px solid #2dd4bf; color: #fff; font-weight: 800;">
+            ⚡ Display wachhalten
+          </button>
         </div>
 
         <button type="submit" class="btn-primary" style="background: var(--gradient-gold); color: #000; font-weight: 900; border: 2px solid #fff; margin-top: 4px;">
@@ -415,8 +441,8 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">Avatar-Foto (Selfie):</label>
-          <div style="display: flex; gap: 8px;">
+          <label class="form-label">Avatar wählen oder Selfie aufnehmen:</label>
+          <div style="display: flex; gap: 8px; margin-bottom: 8px;">
             <label class="btn-primary" style="flex: 1; text-align: center; cursor: pointer; font-size: 13px; padding: 8px 10px;">
               📸 Selfie aufnehmen
               <input type="file" accept="image/*" capture="user" id="newPlayerCameraInput" style="display: none;" />
@@ -427,6 +453,11 @@
             </label>
           </div>
           <img id="newPlayerAvatarPreview" class="camera-preview-img hidden" style="width: 70px; height: 70px; border-radius: 50%; margin: 8px auto 0; display: block;" />
+          
+          <div style="margin-top: 10px;">
+            <div style="font-size: 11px; font-weight: 800; color: var(--walibi-yellow); text-transform: uppercase; margin-bottom: 6px; text-align: center;">Oder Kult-Avatar wählen:</div>
+            <div id="newPlayerAvatarPresetGrid" class="avatar-preset-grid"></div>
+          </div>
         </div>
 
         <button type="submit" class="btn-primary" style="margin-top: 8px;">Mitspielen! 🚀</button>
@@ -495,21 +526,22 @@
       <!-- KAMERA & SCHNAPPSCHUSS TOOL -->
       <div class="game-camera-console">
         <div id="cameraPlaceholder">
-          <div style="font-size: 11px; font-weight: 800; color: var(--walibi-yellow); margin-bottom: 6px; text-transform: uppercase;" id="cameraBoxHeading">Schnappschuss-Tool (Optional)</div>
+          <div style="font-size: 11px; font-weight: 800; color: var(--walibi-yellow); margin-bottom: 6px; text-transform: uppercase;" id="cameraBoxHeading">Beweis-Tool (Foto / Video)</div>
           <div style="display: flex; gap: 8px; justify-content: center;">
             <label class="btn-game-camera">
-              📷 Kamera
-              <input type="file" accept="image/*" capture="environment" id="questCameraInput" style="display: none;" />
+              📷 Foto / Video
+              <input type="file" accept="image/*,video/*" capture="environment" id="questCameraInput" style="display: none;" />
             </label>
             <label class="btn-game-gallery">
               🖼️ Galerie
-              <input type="file" accept="image/*" id="questGalleryInput" style="display: none;" />
+              <input type="file" accept="image/*,video/*" id="questGalleryInput" style="display: none;" />
             </label>
           </div>
         </div>
 
         <img id="photoUploadPreview" class="camera-preview-img hidden" alt="Beweisfoto Vorschau" />
-        <button id="btnRemovePhoto" class="btn-primary hidden" onclick="QuestsModule.removeCapturedPhoto()" style="background: #475569; padding: 6px 10px; font-size: 11px; margin-top: 4px;">Foto entfernen</button>
+        <video id="videoUploadPreview" class="camera-preview-video hidden" controls playsinline></video>
+        <button id="btnRemovePhoto" class="btn-primary hidden" onclick="QuestsModule.removeCapturedPhoto()" style="background: #475569; padding: 6px 10px; font-size: 11px; margin-top: 4px;">Medien entfernen</button>
       </div>
 
       <div id="modalVotingNote" class="voting-note-box hidden" style="margin-bottom: 10px; font-size: 11px; color: var(--walibi-yellow);"></div>
@@ -634,6 +666,10 @@
         </button>
 
         <div class="quick-menu-toggles-row">
+          <button class="quick-toggle-btn" id="menuToggleFullscreen" onclick="ProfileModule.toggleFullscreen()">
+            <span id="menuFullscreenIcon">⛶</span>
+            <span id="menuFullscreenLabel">Vollbild</span>
+          </button>
           <button class="quick-toggle-btn" id="menuToggleSound" onclick="app.toggleSoundFromMenu()">
             <span id="menuSoundIcon">🔊</span>
             <span id="menuSoundLabel">Sound: AN</span>

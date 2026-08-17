@@ -43,8 +43,12 @@ const ParkGuideModule = {
   },
 
   render() {
-    const content = document.getElementById("parkGuideContent");
-    if (!content) return;
+    const containers = [
+      document.getElementById("parkGuideContent"),
+      document.getElementById("view_attractions_content")
+    ].filter(Boolean);
+
+    if (containers.length === 0) return;
 
     const attractions = window.WALIBI_ATTRACTIONS || [];
     const sideQuests = window.SIDE_QUESTS || [];
@@ -58,7 +62,7 @@ const ParkGuideModule = {
     let totalRides = 0;
     Object.values(rideCounts).forEach(c => totalRides += c);
 
-    content.innerHTML = `
+    const htmlContent = `
       <div class="subtabs-row" style="margin-bottom: 12px;">
         <button class="subtab-btn ${isAttractions ? 'active' : ''}" onclick="ParkGuideModule.switchTab('attractions')">Alle 25 Attraktionen</button>
         <button class="subtab-btn ${!isAttractions ? 'active' : ''}" onclick="ParkGuideModule.switchTab('sidequests')">Nebenquests & Badges</button>
@@ -141,6 +145,10 @@ const ParkGuideModule = {
         </div>
       `}
     `;
+
+    containers.forEach(c => {
+      c.innerHTML = htmlContent;
+    });
   },
 
   async logRide(attrId) {

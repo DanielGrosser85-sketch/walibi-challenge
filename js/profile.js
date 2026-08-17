@@ -1,7 +1,18 @@
-/**
- * PROFIL-, ADMIN- & ZUGANGSCODE-VERWALTUNG
- * Mr. oder Mrs. Walibi - Sauftour '26
- */
+// --- LUSTIGE THEMEN- & KULT-AVATARE (AUTHENTISCHE WALIBI MASCOT ARTWORKS) ---
+window.WALIBI_AVATAR_PRESETS = [
+  { id: "fred", name: "Freikörper-Fred", icon: "🩱", url: "assets/mascot_hard_gaan.jpg" },
+  { id: "walibi", name: "Monsieur Walibi", icon: "🦘", url: "assets/mascot_kangaroo.jpg" },
+  { id: "fox", name: "Großer (Captain)", icon: "🧢", url: "assets/mascot_fox.jpg" },
+  { id: "eddie", name: "Eddie de Clown", icon: "🤡", url: "assets/mascot_eddie_clown.jpg" },
+  { id: "zenko", name: "Zenko (Drummer)", icon: "🦍", url: "assets/mascot_zenko_gorilla.jpg" },
+  { id: "fibi", name: "Fibi (Lead-Star)", icon: "🎤", url: "assets/mascot_fibi_singer.jpg" },
+  { id: "haaz", name: "Haaz (Cheetah DJ)", icon: "🐆", url: "assets/mascot_haaz_cheetah.jpg" },
+  { id: "squad", name: "Squad (The SkunX)", icon: "🎸", url: "assets/mascot_squad_skunx.jpg" },
+  { id: "baron", name: "Bier-Baron", icon: "🍺", url: "assets/mascot_bier_baron.jpg" },
+  { id: "goliath", name: "Goliath-Astronaut", icon: "🚀", url: "assets/mascot_goliath_astronaut.jpg" },
+  { id: "untamed", name: "Untamed-Schreihals", icon: "😱", url: "assets/mascot_untamed_beast.jpg" }
+];
+
 const ProfileModule = {
   capturedNewAvatarBase64: null,
   capturedEditAvatarBase64: null,
@@ -24,11 +35,12 @@ const ProfileModule = {
 
     if (savedCode === "1008") {
       this.isAdmin = true;
-      this.activateAdminMode();
-      this.ensureCurrentUser();
+      this.ensureAdminUser();
       if (codeModal) codeModal.classList.add("hidden");
     } else if (savedCode === "6969") {
       this.isAdmin = false;
+      const adminBtn = document.getElementById("btnAdminPanel");
+      if (adminBtn) adminBtn.style.display = "none";
       this.ensureCurrentUser();
       if (codeModal) codeModal.classList.add("hidden");
     } else {
@@ -48,14 +60,7 @@ const ProfileModule = {
       // ADMIN: GROSSEK
       localStorage.setItem("walibi_access_code", "1008");
       this.isAdmin = true;
-      this.activateAdminMode();
-
-      // Sicherstellen, dass grossek als Spieler existiert
-      let grossek = window.store.state.players.find(p => p.name.toLowerCase() === "grossek");
-      if (!grossek) {
-        grossek = window.store.addPlayer("grossek", "Haus 1", "assets/mascot_hard_gaan.jpg");
-      }
-      window.store.setCurrentUser(grossek);
+      this.ensureAdminUser();
 
       if (codeModal) codeModal.classList.add("hidden");
       if (errEl) errEl.textContent = "";
@@ -67,14 +72,18 @@ const ProfileModule = {
         window.app.showToast(`👑 Willkommen, Admin <strong>grossek</strong>! Spielleiter-Modus aktiv.`);
       }
     } else if (code === "6969") {
-      // REGULÄRER TEILNEHMER
+      // REGULÄRER TEILNEHMER (KEIN ADMIN)
       localStorage.setItem("walibi_access_code", "6969");
       this.isAdmin = false;
+      const adminBtn = document.getElementById("btnAdminPanel");
+      if (adminBtn) adminBtn.style.display = "none";
+
       if (codeModal) codeModal.classList.add("hidden");
       if (errEl) errEl.textContent = "";
       if (window.GameAudio) window.GameAudio.playClick();
 
       this.ensureCurrentUser();
+      this.updateHeaderProfile();
       if (window.app && window.app.showToast) {
         window.app.showToast(`🚀 Zugang freigeschaltet! Willkommen bei der Sauftour '26.`);
       }
@@ -87,16 +96,42 @@ const ProfileModule = {
     }
   },
 
+  isAdminUser() {
+    const savedCode = localStorage.getItem("walibi_access_code");
+    const user = window.store && window.store.state ? window.store.state.currentUser : null;
+    return (savedCode === "1008" || this.isAdmin) && user && user.name && user.name.toLowerCase() === "grossek";
+  },
+
   activateAdminMode() {
-    const adminBtn = document.getElementById("btnAdminPanel");
-    if (adminBtn) {
-      adminBtn.style.display = "flex";
+    this.isAdmin = true;
+    this.updateHeaderProfile();
+  },
+
+  ensureAdminUser() {
+    const savedUserId = localStorage.getItem("walibi_active_user_id");
+    let grossek = null;
+    if (savedUserId && window.store && window.store.state) {
+      grossek = window.store.state.players.find(p => p.id === savedUserId);
+    }
+    if (!grossek && window.store && window.store.state) {
+      grossek = window.store.state.players.find(p => p.name.toLowerCase() === "grossek");
+    }
+    if (!grossek && window.store) {
+      grossek = window.store.addPlayer("grossek", "Haus 1", "assets/mascot_fox.jpg");
+    }
+    if (grossek && window.store) {
+      window.store.setCurrentUser(grossek);
     }
   },
 
   // --- 👑 ADMIN-FUNKTIONEN (NUR FÜR GROSSEK) ---
   openAdminModal() {
-    if (!this.isAdmin) return;
+    if (!this.isAdminUser()) {
+      if (window.app && window.app.showToast) {
+        window.app.showToast("🔒 Admin-Bereich ist ausschließlich für <strong>grossek</strong> zugänglich!");
+      }
+      return;
+    }
     if (window.GameAudio) window.GameAudio.playClick();
     const modal = document.getElementById("adminModal");
     if (modal) modal.classList.remove("hidden");
@@ -228,32 +263,67 @@ const ProfileModule = {
     }
   },
 
-  // --- 📱 VOLLBILD-MODUS (FULLSCREEN API) ---
+  // --- 📱 VOLLBILD-MODUS (CROSS-BROWSER FULLSCREEN API) ---
   toggleFullscreen() {
     if (window.GameAudio) window.GameAudio.playClick();
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(err => {
-        console.warn("Fullscreen nicht erlaubt", err);
-      });
+    const doc = document;
+    const docEl = document.documentElement;
+
+    const isFullscreen = doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement;
+
+    if (!isFullscreen) {
+      if (docEl.requestFullscreen) {
+        docEl.requestFullscreen().catch(err => {
+          console.warn("Fullscreen nicht erlaubt", err);
+          if (window.app && window.app.showToast) window.app.showToast("💡 Tipp: Als PWA zum Homescreen hinzufügen für dauerhaften Vollbildmodus!");
+        });
+      } else if (docEl.webkitRequestFullscreen) {
+        docEl.webkitRequestFullscreen();
+      } else if (docEl.mozRequestFullScreen) {
+        docEl.mozRequestFullScreen();
+      } else if (docEl.msRequestFullscreen) {
+        docEl.msRequestFullscreen();
+      }
+      if (window.app && window.app.showToast) {
+        window.app.showToast("⛶ Vollbild-Modus aktiviert!");
+      }
     } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
+      if (doc.exitFullscreen) {
+        doc.exitFullscreen().catch(() => {});
+      } else if (doc.webkitExitFullscreen) {
+        doc.webkitExitFullscreen();
+      } else if (doc.mozCancelFullScreen) {
+        doc.mozCancelFullScreen();
+      } else if (doc.msExitFullscreen) {
+        doc.msExitFullscreen();
+      }
+      if (window.app && window.app.showToast) {
+        window.app.showToast("⛶ Vollbild beendet.");
       }
     }
   },
 
   // --- 1. BENUTZER SICHERSTELLEN ---
   ensureCurrentUser() {
+    const savedUserId = localStorage.getItem("walibi_active_user_id");
     const state = window.store ? window.store.state : null;
     if (!state) return;
 
-    if (!state.currentUser && state.players && state.players.length > 0) {
-      window.store.setCurrentUser(state.players[0]);
+    if (savedUserId && state.players && state.players.length > 0) {
+      const found = state.players.find(p => p.id === savedUserId);
+      if (found) {
+        state.currentUser = found;
+        return;
+      }
     }
 
-    if (!state.currentUser) {
-      this.openProfileSelectModal();
+    if (state.currentUser && state.currentUser.id) {
+      localStorage.setItem("walibi_active_user_id", state.currentUser.id);
+      return;
     }
+
+    // Wenn noch kein Profil für dieses Handy gewählt wurde -> Profilauswahl öffnen!
+    this.openProfileSelectModal();
   },
 
   setupProfileTrigger() {
@@ -303,6 +373,11 @@ const ProfileModule = {
       houseSelect.innerHTML = houses.map(h => `<option value="${h}" ${h === user.house ? 'selected' : ''}>${h}</option>`).join("");
     }
 
+    // Preset Avatar Galerie rendern
+    this.renderAvatarPresetGrid("myProfileAvatarPresetGrid", this.capturedEditAvatarBase64, (url) => {
+      this.setQuickAvatar(url);
+    });
+
     const scoreEl = document.getElementById("myProfileScore");
     const questsEl = document.getElementById("myProfileQuestsCount");
     const ridesEl = document.getElementById("myProfileRidesCount");
@@ -344,6 +419,40 @@ const ProfileModule = {
     this.capturedEditAvatarBase64 = avatarUrl;
     const avatarEl = document.getElementById("myProfileAvatarPreview");
     if (avatarEl) avatarEl.src = avatarUrl;
+    this.renderAvatarPresetGrid("myProfileAvatarPresetGrid", avatarUrl, (url) => this.setQuickAvatar(url));
+  },
+
+  renderAvatarPresetGrid(containerId, activeUrl, onSelect) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const presets = window.WALIBI_AVATAR_PRESETS || [];
+    container.innerHTML = presets.map(p => {
+      const isSelected = activeUrl === p.url;
+      return `
+        <div class="avatar-preset-item ${isSelected ? 'selected' : ''}" onclick="ProfileModule.selectPresetAvatar('${containerId}', '${p.id}')" title="${p.name}">
+          <img src="${p.url}" class="preset-avatar-thumb" alt="${p.name}" />
+          <span class="preset-avatar-name">${p.name}</span>
+        </div>
+      `;
+    }).join("");
+  },
+
+  selectPresetAvatar(containerId, presetId) {
+    const preset = (window.WALIBI_AVATAR_PRESETS || []).find(p => p.id === presetId);
+    if (!preset) return;
+
+    if (containerId.includes("myProfile")) {
+      this.setQuickAvatar(preset.url);
+    } else {
+      this.capturedNewAvatarBase64 = preset.url;
+      const prev = document.getElementById("newPlayerAvatarPreview");
+      if (prev) {
+        prev.src = preset.url;
+        prev.classList.remove("hidden");
+      }
+      this.renderAvatarPresetGrid(containerId, preset.url, null);
+    }
   },
 
   // --- 3. ONBOARDING SPIELER-AUSWAHL (NUR BEIM ERSTEN START) ---
@@ -402,7 +511,7 @@ const ProfileModule = {
   setupProfileModals() {
     const editForm = document.getElementById("editProfileForm");
     if (editForm) {
-      editForm.onsubmit = (e) => {
+      editForm.onsubmit = async (e) => {
         e.preventDefault();
         const user = window.store ? window.store.state.currentUser : null;
         if (!user) return;
@@ -415,7 +524,7 @@ const ProfileModule = {
 
         if (!newName) return;
 
-        window.store.updateProfile(user.id, {
+        await window.store.updateProfile(user.id, {
           name: newName,
           house: newHouse,
           avatar: newAvatar
@@ -452,6 +561,15 @@ const ProfileModule = {
           if (houseSelect && window.store) {
             houseSelect.innerHTML = (window.store.state.houses || ["Haus 1", "Haus 2", "Haus 3"]).map(h => `<option value="${h}">${h}</option>`).join("");
           }
+          this.capturedNewAvatarBase64 = null;
+          this.renderAvatarPresetGrid("newPlayerAvatarPresetGrid", null, (url) => {
+            this.capturedNewAvatarBase64 = url;
+            const prev = document.getElementById("newPlayerAvatarPreview");
+            if (prev) {
+              prev.src = url;
+              prev.classList.remove("hidden");
+            }
+          });
           createModal.classList.remove("hidden");
         }
       };
@@ -550,6 +668,17 @@ const ProfileModule = {
     const nameEl = document.getElementById("headerUserName");
     const pointsEl = document.getElementById("headerUserPoints");
     const avatarEl = document.getElementById("headerUserAvatar");
+    const adminBtn = document.getElementById("btnAdminPanel");
+    const menuAdminBtn = document.getElementById("menuAdminBtn");
+    const isGrossekAdmin = this.isAdminUser();
+
+    // KRONE & ADMIN BUTTONS NUR FÜR DEN ECHTEN ADMIN GROSSEK ANZEIGEN (NIEMALS FÜR ALEX ODER ANDERE SPIELER)
+    if (adminBtn) {
+      adminBtn.style.display = isGrossekAdmin ? "flex" : "none";
+    }
+    if (menuAdminBtn) {
+      menuAdminBtn.style.display = isGrossekAdmin ? "flex" : "none";
+    }
 
     if (!user) {
       if (nameEl) nameEl.textContent = "Gast";

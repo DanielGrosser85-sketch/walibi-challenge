@@ -1,16 +1,10 @@
 /**
- * SIEGEREHRUNG, ZEITFENSTER-STEUERUNG & SAUFTOUR-ZEUGNIS '26
- * Offizielles Zeitfenster: 12.09.2026 00:00 Uhr bis 24:00 Uhr
+ * SIEGEREHRUNG & SAUFTOUR-ZEUGNIS '26
+ * Spielende und Siegerehrung werden manuell vom Admin im Admin-Panel ausgelöst
  */
 const AwardsModule = {
-  OFFICIAL_START: new Date("2026-09-12T00:00:00"),
-  OFFICIAL_END: new Date("2026-09-12T23:59:59"),
-  autoEndTriggered: false,
-
   init() {
-    this.checkGameTimeStatus();
-    // Prüfe alle 30 Sekunden das Zeitfenster
-    setInterval(() => this.checkGameTimeStatus(), 30000);
+    // Kein automatischer Zwangs-Stop – Das Spiel läuft dauerhaft bis zum manuellen Admin-Abschluss
   },
 
   // Prüft ob das Spiel aktuell läuft oder beendet ist
@@ -20,27 +14,7 @@ const AwardsModule = {
       if (state.gameStatus.isEnded) return false;
       if (state.gameStatus.isRunning) return true;
     }
-
-    const now = new Date();
-    // Falls echtes Datum im Fenster liegt:
-    if (now >= this.OFFICIAL_START && now <= this.OFFICIAL_END) {
-      return true;
-    }
-
-    // Für Testphasen vor dem 12.09.26: Standardmäßig aktiv, sofern Admin nicht beendet hat
-    return !(state && state.gameStatus && state.gameStatus.isEnded);
-  },
-
-  checkGameTimeStatus() {
-    const now = new Date();
-    // Falls das offizielle Zeitfenster am 12.09.26 um 24:00 Uhr abläuft
-    if (now > this.OFFICIAL_END && !this.autoEndTriggered) {
-      const state = window.store ? window.store.state : null;
-      if (state && state.gameStatus && !state.gameStatus.isEnded) {
-        this.autoEndTriggered = true;
-        this.openCelebrationModal(true);
-      }
-    }
+    return true;
   },
 
   // --- SIEGEREHRUNG & ZEUGNIS ÖFFNEN ---

@@ -55,10 +55,15 @@ const FeedModule = {
   removeSocialPhotoPreview() {
     this.capturedSocialPhotoBase64 = null;
     const preview = document.getElementById("socialPhotoPreview");
+    const videoPreview = document.getElementById("socialVideoPreview");
     const removeBtn = document.getElementById("btnRemoveSocialPhoto");
     if (preview) {
       preview.classList.add("hidden");
       preview.src = "";
+    }
+    if (videoPreview) {
+      videoPreview.classList.add("hidden");
+      videoPreview.src = "";
     }
     if (removeBtn) removeBtn.classList.add("hidden");
   },
@@ -69,47 +74,72 @@ const FeedModule = {
 
     if (window.GameAudio) window.GameAudio.playClick();
 
+    const isVideo = file.type.startsWith('video/');
     const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
-        const maxDim = 900;
-        let width = img.width;
-        let height = img.height;
 
-        if (width > height) {
-          if (width > maxDim) {
-            height *= maxDim / width;
-            width = maxDim;
-          }
-        } else {
-          if (height > maxDim) {
-            width *= maxDim / height;
-            height = maxDim;
-          }
-        }
+    if (isVideo) {
+      // VIDEO EINLESEN
+      reader.onload = (e) => {
+        const b64 = e.target.result;
+        this.capturedSocialPhotoBase64 = b64;
 
-        canvas.width = width;
-        canvas.height = height;
-        ctx.drawImage(img, 0, 0, width, height);
-
-        const compressed = canvas.toDataURL("image/jpeg", 0.82);
-        this.capturedSocialPhotoBase64 = compressed;
-
-        const preview = document.getElementById("socialPhotoPreview");
+        const previewImg = document.getElementById("socialPhotoPreview");
+        const previewVid = document.getElementById("socialVideoPreview");
         const removeBtn = document.getElementById("btnRemoveSocialPhoto");
 
-        if (preview) {
-          preview.src = compressed;
-          preview.classList.remove("hidden");
+        if (previewImg) previewImg.classList.add("hidden");
+        if (previewVid) {
+          previewVid.src = b64;
+          previewVid.classList.remove("hidden");
         }
         if (removeBtn) removeBtn.classList.remove("hidden");
       };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
+      reader.readAsDataURL(file);
+    } else {
+      // FOTO KOMPRIMIEREN
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+          const maxDim = 900;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > maxDim) {
+              height *= maxDim / width;
+              width = maxDim;
+            }
+          } else {
+            if (height > maxDim) {
+              width *= maxDim / height;
+              height = maxDim;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          ctx.drawImage(img, 0, 0, width, height);
+
+          const compressed = canvas.toDataURL("image/jpeg", 0.82);
+          this.capturedSocialPhotoBase64 = compressed;
+
+          const previewImg = document.getElementById("socialPhotoPreview");
+          const previewVid = document.getElementById("socialVideoPreview");
+          const removeBtn = document.getElementById("btnRemoveSocialPhoto");
+
+          if (previewVid) previewVid.classList.add("hidden");
+          if (previewImg) {
+            previewImg.src = compressed;
+            previewImg.classList.remove("hidden");
+          }
+          if (removeBtn) removeBtn.classList.remove("hidden");
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
   },
 
   async submitSocialPost() {
@@ -120,7 +150,7 @@ const FeedModule = {
     const text = textInp ? textInp.value.trim() : "";
 
     if (!text && !this.capturedSocialPhotoBase64) {
-      alert("Bitte gib einen kurzen Text ein oder wähle ein Foto aus!");
+      alert("Bitte gib einen kurzen Text ein oder wähle ein Foto/Video aus!");
       return;
     }
 
@@ -132,7 +162,7 @@ const FeedModule = {
     await window.store.createFreePost(currentUser.id, text, this.capturedSocialPhotoBase64);
 
     if (window.app && window.app.showToast) {
-      window.app.showToast(`📸 +10 Punkte für deinen spontanen Schnappschuss!`);
+      window.app.showToast(`📸 +10 Punkte für deinen Post / Schnappschuss!`);
     }
 
     this.renderFeed();
@@ -366,22 +396,34 @@ const FeedModule = {
                   💬 "${this.escapeHtml(item.userComment)}"
                 </div>
               ` : ''}
-              ${item.photo ? `
-                <div class="feed-photo-wrapper" onclick="FeedModule.openPhotoModal('${item.photo}')">
-                  <img src="${item.photo}" class="feed-proof-photo" loading="lazy" alt="Beweisfoto" />
-                  <span class="photo-expand-hint">🔍 Vergrößern</span>
-                </div>
-              ` : ''}
+              ${item.photo ? (
+                (item.isVideo || item.photo.endsWith('.mp4') || item.photo.endsWith('.webm') || item.photo.endsWith('.mov') || item.photo.startsWith('data:video')) ? `
+                  <div class="feed-video-wrapper">
+                    <video src="${item.photo}" controls playsinline preload="metadata" class="feed-proof-video"></video>
+                  </div>
+                ` : `
+                  <div class="feed-photo-wrapper" onclick="FeedModule.openPhotoModal('${item.photo}')">
+                    <img src="${item.photo}" class="feed-proof-photo" loading="lazy" alt="Beweisfoto" />
+                    <span class="photo-expand-hint">🔍 Vergrößern</span>
+                  </div>
+                `
+              ) : ''}
             ` : isSocial ? `
               <div style="font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 8px; line-height: 1.4;">
                 ${this.escapeHtml(item.text)}
               </div>
-              ${item.photo ? `
-                <div class="feed-photo-wrapper" onclick="FeedModule.openPhotoModal('${item.photo}')">
-                  <img src="${item.photo}" class="feed-proof-photo" loading="lazy" alt="Schnappschuss" />
-                  <span class="photo-expand-hint">🔍 Vergrößern</span>
-                </div>
-              ` : ''}
+              ${item.photo ? (
+                (item.isVideo || item.photo.endsWith('.mp4') || item.photo.endsWith('.webm') || item.photo.endsWith('.mov') || item.photo.startsWith('data:video')) ? `
+                  <div class="feed-video-wrapper">
+                    <video src="${item.photo}" controls playsinline preload="metadata" class="feed-proof-video"></video>
+                  </div>
+                ` : `
+                  <div class="feed-photo-wrapper" onclick="FeedModule.openPhotoModal('${item.photo}')">
+                    <img src="${item.photo}" class="feed-proof-photo" loading="lazy" alt="Schnappschuss" />
+                    <span class="photo-expand-hint">🔍 Vergrößern</span>
+                  </div>
+                `
+              ) : ''}
             ` : `
               <div class="feed-drink-row">
                 <span class="drink-big-icon">${item.itemIcon || '🍺'}</span>
