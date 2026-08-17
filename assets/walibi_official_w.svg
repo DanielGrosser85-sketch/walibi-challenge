@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="100%" height="100%">
+  <!-- Hintergrund: Kräftiges Walibi-Gelb -->
+  <rect width="120" height="120" rx="26" fill="#fec800"/>
+  
+  <!-- Schattenflächen für den 3D Cutout-Effekt des offiziellen Walibi W -->
+  <!-- Linker Innenschatten -->
+  <polygon points="20,22 46,12 40,36 32,24" fill="#880e15" opacity="0.85"/>
+  <!-- Rechter Oberschatten -->
+  <polygon points="76,8 108,18 90,44 76,28" fill="#880e15" opacity="0.85"/>
+  
+  <!-- Hauptform: Das ikonische rote Walibi 'W' -->
+  <path d="M 18,22 
+           L 46,12 
+           L 38,36 
+           L 58,24 
+           L 52,50 
+           L 76,6 
+           L 108,18 
+           L 88,90 
+           L 70,92 
+           L 56,66 
+           L 44,92 
+           L 24,88 
+           Z" 
+        fill="#ed1c24"/>
+
+  <!-- Schattenkanten-Facetten für 3D Tiefe -->
+  <polygon points="18,22 46,12 38,36 28,34" fill="#a0121a"/>
+  <polygon points="76,6 108,18 94,40 82,24" fill="#a0121a"/>
+  <polygon points="56,66 70,92 88,90 78,82" fill="#d01820"/>
+  <polygon points="44,92 24,88 28,78 40,80" fill="#d01820"/>
+  
+  <!-- Kleiner Walibi-Schriftzug unten -->
+  <g fill="#ed1c24">
+    <!-- W -->
+    <path d="M 20,98 L 24,114 L 28,114 L 30,105 L 32,114 L 36,114 L 40,98 L 36,98 L 33,108 L 31,100 L 29,100 L 27,108 L 24,98 Z"/>
+    <!-- A -->
+    <path d="M 42,114 L 46,98 L 50,98 L 54,114 L 50,114 L 49,109 L 46,109 L 45,114 Z M 47,105 L 49,105 L 48,101 Z"/>
+    <!-- L -->
+    <path d="M 57,98 L 57,114 L 66,114 L 66,110 L 61,110 L 61,98 Z"/>
+    <!-- I -->
+    <path d="M 69,102 L 73,102 L 73,114 L 69,114 Z M 69,97 L 73,97 L 73,100 L 69,100 Z"/>
+    <!-- B -->
+    <path d="M 76,98 L 83,98 Q 86,98 86,101 Q 86,103 84,104 Q 87,105 87,109 Q 87,114 82,114 L 76,114 Z M 80,101 L 80,104 L 82,104 Q 83,104 83,102.5 Q 83,101 82,101 Z M 80,107 L 80,111 L 83,111 Q 84,111 84,109 Q 84,107 83,107 Z"/>
+    <!-- I (mit Akzent) -->
+    <path d="M 90,102 L 94,102 L 94,114 L 90,114 Z M 91,96 L 95,98 L 93,100 L 89,98 Z"/>
+  </g>
+</svg>
