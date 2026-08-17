@@ -287,34 +287,28 @@ class AppStore {
       this.state.sympathyVotes = serverDb.sympathyVotes;
     }
 
-    const savedUserId = localStorage.getItem(this.USER_KEY) || localStorage.getItem("walibi_active_user_id") || (this.state.currentUser ? this.state.currentUser.id : null);
+    let savedUserId = localStorage.getItem(this.USER_KEY) || localStorage.getItem("walibi_active_user_id") || (this.state.currentUser ? this.state.currentUser.id : null);
 
-    // Eigenen aktiven Nutzer sicherstellen
-    if (savedUserId) {
+    const isAdmin = (window.ProfileModule && window.ProfileModule.isAdminUser && window.ProfileModule.isAdminUser()) || (localStorage.getItem("walibi_access_code") === "1008");
+
+    if (isAdmin) {
+      let grossek = this.state.players.find(p => p.name.toLowerCase() === "grossek");
+      if (grossek) {
+        this.state.currentUser = { ...grossek };
+        localStorage.setItem(this.USER_KEY, grossek.id);
+        localStorage.setItem("walibi_active_user_id", grossek.id);
+        this.checkAndAutoUnlockSideQuests(grossek.id);
+      }
+    } else if (savedUserId) {
       const myUpdated = this.state.players.find(p => p.id === savedUserId);
       if (myUpdated) {
         this.state.currentUser = { ...myUpdated };
         this.checkAndAutoUnlockSideQuests(savedUserId);
-      } else {
-        // Der Spieler existiert in der DB nicht mehr (z. B. nach Admin-Reset auf 0)
-        this.state.currentUser = null;
-        localStorage.removeItem(this.USER_KEY);
-        localStorage.removeItem("walibi_active_user_id");
-        if (window.ProfileModule) {
-          window.ProfileModule.ensureCurrentUser();
-        }
       }
     } else if (this.state.currentUser) {
       const myUpdated = this.state.players.find(p => p.id === this.state.currentUser.id);
       if (myUpdated) {
         this.state.currentUser = { ...myUpdated };
-      } else {
-        this.state.currentUser = null;
-        localStorage.removeItem(this.USER_KEY);
-        localStorage.removeItem("walibi_active_user_id");
-        if (window.ProfileModule) {
-          window.ProfileModule.ensureCurrentUser();
-        }
       }
     }
 
@@ -422,10 +416,13 @@ class AppStore {
     const newCount = Math.max(0, currentCount + delta);
     player.rideCounts[attrId] = newCount;
 
+    const multiplier = this.getPointsMultiplier();
+    const pointsPerRide = 5 * multiplier;
+
     if (delta > 0) {
-      player.points = Number(player.points || 0) + (5 * delta);
+      player.points = Number(player.points || 0) + (pointsPerRide * delta);
     } else if (delta < 0 && currentCount > 0) {
-      player.points = Math.max(0, Number(player.points || 0) + (5 * delta));
+      player.points = Math.max(0, Number(player.points || 0) + (pointsPerRide * delta));
     }
 
     if (this.state.currentUser && this.state.currentUser.id === userId) {
@@ -757,17 +754,21 @@ class AppStore {
           const status = this.getSideQuestStatus(sq.id, player);
           if (status.isGoalReached) {
             // 🎉 Automatische Freischaltung!
+            const multiplier = this.getPointsMultiplier();
+            const basePts = typeof sq.points === 'number' ? sq.points : 25;
+            const earnedPts = basePts * multiplier;
+
             player.completedSideQuests.push(sq.id);
-            player.points = Number(player.points || 0) + sq.points;
+            player.points = Number(player.points || 0) + earnedPts;
             unlockedAny = true;
-            newlyUnlocked.push(sq);
+            newlyUnlocked.push({ ...sq, earnedPts, basePts, multiplier });
 
             const isCurrent = this.state.currentUser && this.state.currentUser.id === player.id;
             if (isCurrent) {
               if (window.GameAudio) window.GameAudio.playFanfare();
               if (window.app && window.app.fireConfetti) window.app.fireConfetti();
               if (window.app && window.app.showToast) {
-                window.app.showToast(`🏆 <strong>Errungenschaft freigeschaltet!</strong><br>${sq.title} (+${sq.points} Pkt)`);
+                window.app.showToast(`🏆 <strong>Errungenschaft freigeschaltet!</strong><br>${sq.title} (+${earnedPts} Pkt${multiplier > 1 ? ' ⚡ 2X Happy Hour!' : ''})`);
               }
             }
           }
@@ -794,8 +795,10 @@ class AppStore {
               achievementTitle: sq.title,
               achievementDesc: sq.desc,
               achievementIcon: sq.icon || "🏆",
-              points: sq.points,
-              actualPointsAwarded: sq.points,
+              points: sq.earnedPts,
+              basePoints: sq.basePts,
+              actualPointsAwarded: sq.earnedPts,
+              isHappyHour: sq.multiplier > 1,
               timestamp: new Date().toISOString(),
               reactions: { "🔥": [], "🍺": [], "👑": [], "💀": [], "👏": [] },
               comments: []
@@ -810,6 +813,8 @@ class AppStore {
                 body: JSON.stringify({
                   userId: player.id,
                   achievement: sq,
+                  points: sq.earnedPts,
+                  basePoints: sq.basePts,
                   feedItem: feedItem
                 })
               }).catch(() => {});
@@ -1070,9 +1075,9 @@ class AppStore {
     const player = this.state.players.find(p => p.id === userId);
     if (!player) return null;
 
-    // 5 Punkte für reine Textnachricht, 10 Punkte für Foto/Video (2x bei Happy Hour)
+    const multiplier = this.getPointsMultiplier();
     const basePoints = photoBase64 ? 10 : 5;
-    const points = basePoints * this.getPointsMultiplier();
+    const points = basePoints * multiplier;
     player.points = (player.points || 0) + points;
 
     if (this.state.currentUser && this.state.currentUser.id === userId) {
@@ -1095,7 +1100,9 @@ class AppStore {
       text: text || (photoBase64 ? "Schnappschuss geteilt 📸" : "Status geteilt 📝"),
       photo: photoBase64 || null,
       points: points,
+      basePoints: basePoints,
       actualPointsAwarded: points,
+      isHappyHour: multiplier > 1,
       timestamp: new Date().toISOString(),
       reactions: { "🔥": [], "🍺": [], "👑": [], "💀": [], "👏": [] },
       comments: []
@@ -1135,7 +1142,25 @@ class AppStore {
       player = this.state.players[0];
       userId = player.id;
     }
-    if (!player) return null;
+    if (!player) {
+      player = {
+        id: "p_" + Date.now(),
+        name: "Spieler",
+        house: "Haus 1",
+        avatar: "assets/mascot_fox.jpg",
+        points: 0,
+        drinksCount: 0,
+        completedQuests: [],
+        completedSideQuests: [],
+        rideCounts: {},
+        drinksDetail: { beer: 0, shot: 0, longdrink: 0, joint: 0, water: 0 },
+        gutGlaubenCount: 0
+      };
+      if (!Array.isArray(this.state.players)) this.state.players = [];
+      this.state.players.push(player);
+      this.state.currentUser = player;
+      userId = player.id;
+    }
 
     const item = (this.state.counterItems || window.COUNTER_ITEMS || []).find(i => i.id === itemId) || { id: itemId, name: itemId, points: 5, icon: "🍺" };
 
@@ -1157,21 +1182,23 @@ class AppStore {
 
     this.saveLocalState();
 
-    try {
-      await fetch("/api/counter/log", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: player.id,
-          itemId: item.id,
-          itemName: item.name,
-          itemIcon: item.icon,
-          points: basePoints
-        })
-      });
-    } catch (e) {}
+    // Async Server Sync im Hintergrund ohne UI zu blockieren
+    fetch("/api/counter/log", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: player.id,
+        userName: player.name,
+        itemId: item.id,
+        itemName: item.name,
+        itemIcon: item.icon,
+        points: basePoints
+      })
+    }).catch(() => {});
 
-    this.checkAndAutoUnlockSideQuests(player.id);
+    try {
+      this.checkAndAutoUnlockSideQuests(player.id);
+    } catch(e) {}
     return null;
   }
 
@@ -1351,10 +1378,11 @@ class AppStore {
         }
       }
       if (window.app && window.app.showToast) {
+        const hhBadge = this.getPointsMultiplier() > 1 ? ' (⚡ 2X Happy Hour!)' : '';
         if (feedItem.userId === userId) {
-          window.app.showToast(`${emoji} +5 Punkte für deinen Beitrag!`);
+          window.app.showToast(`${emoji} +${reactionPoints} Punkte für deinen Beitrag!${hhBadge}`);
         } else {
-          window.app.showToast(`${emoji} +5 Punkte an <strong>${feedItem.userName}</strong> vergeben!`);
+          window.app.showToast(`${emoji} +${reactionPoints} Punkte an <strong>${feedItem.userName}</strong> vergeben!${hhBadge}`);
         }
       }
     }

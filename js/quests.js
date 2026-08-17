@@ -54,11 +54,15 @@ const QuestsModule = {
       return;
     }
 
+    const isHH = window.store && window.store.isHappyHourActive();
+    const multiplier = isHH ? 2 : 1;
+
     container.innerHTML = filtered.map((q, idx) => {
       const isCompletedByMe = completedList.includes(q.id);
       const playersCompleted = (window.store ? window.store.state.players : []).filter(p => p.completedQuests && p.completedQuests.includes(q.id));
 
-      let badgeHtml = `<span class="points-badge">+${q.points} Pkt</span>`;
+      const displayPoints = q.points * multiplier;
+      let badgeHtml = `<span class="points-badge ${isHH ? 'happy-hour-glow' : ''}">+${displayPoints} Pkt${isHH ? ' ⚡ 2X' : ''}</span>`;
       if (q.bonusPoints) {
         badgeHtml += ` <span style="background: rgba(255,204,0,0.3); color: #ffcc00; font-size: 10px; font-weight: 900; padding: 2px 6px; border-radius: 999px; border: 1px solid #ffcc00;">🔥 +${q.bonusPoints} Pkt Gruppe</span>`;
       }
@@ -166,21 +170,27 @@ const QuestsModule = {
     // 2. ERGEBNISSE / OUTCOMES (Erfolg vs. Kotz-Malus / Minuspunkte)
     const outcomeSection = document.getElementById("questOutcomeSection");
     const outcomeList = document.getElementById("questOutcomeOptionsList");
+    const isHH = window.store && window.store.isHappyHourActive();
+    const multiplier = isHH ? 2 : 1;
+
     if (quest.outcomes && quest.outcomes.length > 0) {
       this.selectedOutcomeId = quest.outcomes[0].id;
       if (outcomeSection) outcomeSection.classList.remove("hidden");
       if (outcomeList) {
-        outcomeList.innerHTML = quest.outcomes.map(o => `
-          <div class="quest-outcome-card ${o.id === this.selectedOutcomeId ? 'active' : ''} ${o.points < 0 ? 'outcome-penalty' : 'outcome-success'}" onclick="QuestsModule.selectOutcome('${o.id}')">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <span style="font-size: 16px;">${o.id === this.selectedOutcomeId ? '🔘' : '⚪'}</span>
-              <span style="font-weight: 800; font-size: 13px; color: #fff;">${o.label}</span>
+        outcomeList.innerHTML = quest.outcomes.map(o => {
+          const outcomePts = o.points > 0 ? (o.points * multiplier) : o.points;
+          return `
+            <div class="quest-outcome-card ${o.id === this.selectedOutcomeId ? 'active' : ''} ${o.points < 0 ? 'outcome-penalty' : 'outcome-success'}" onclick="QuestsModule.selectOutcome('${o.id}')">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 16px;">${o.id === this.selectedOutcomeId ? '🔘' : '⚪'}</span>
+                <span style="font-weight: 800; font-size: 13px; color: #fff;">${o.label}</span>
+              </div>
+              <span class="outcome-points-badge ${o.points < 0 ? 'negative' : 'positive'} ${isHH && o.points > 0 ? 'happy-hour-glow' : ''}">
+                ${outcomePts > 0 ? `+${outcomePts}` : outcomePts} Pkt${isHH && o.points > 0 ? ' ⚡ 2X' : ''}
+              </span>
             </div>
-            <span class="outcome-points-badge ${o.points < 0 ? 'negative' : 'positive'}">
-              ${o.points > 0 ? `+${o.points}` : o.points} Pkt
-            </span>
-          </div>
-        `).join("");
+          `;
+        }).join("");
       }
     } else {
       this.selectedOutcomeId = null;
@@ -235,20 +245,26 @@ const QuestsModule = {
     if (window.GameAudio) window.GameAudio.playClick();
     this.selectedOutcomeId = outcomeId;
 
+    const isHH = window.store && window.store.isHappyHourActive();
+    const multiplier = isHH ? 2 : 1;
+
     // UI aktualisieren
     const outcomeList = document.getElementById("questOutcomeOptionsList");
     if (outcomeList && this.activeQuest && this.activeQuest.outcomes) {
-      outcomeList.innerHTML = this.activeQuest.outcomes.map(o => `
-        <div class="quest-outcome-card ${o.id === this.selectedOutcomeId ? 'active' : ''} ${o.points < 0 ? 'outcome-penalty' : 'outcome-success'}" onclick="QuestsModule.selectOutcome('${o.id}')">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <span style="font-size: 16px;">${o.id === this.selectedOutcomeId ? '🔘' : '⚪'}</span>
-            <span style="font-weight: 800; font-size: 13px; color: #fff;">${o.label}</span>
+      outcomeList.innerHTML = this.activeQuest.outcomes.map(o => {
+        const outcomePts = o.points > 0 ? (o.points * multiplier) : o.points;
+        return `
+          <div class="quest-outcome-card ${o.id === this.selectedOutcomeId ? 'active' : ''} ${o.points < 0 ? 'outcome-penalty' : 'outcome-success'}" onclick="QuestsModule.selectOutcome('${o.id}')">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 16px;">${o.id === this.selectedOutcomeId ? '🔘' : '⚪'}</span>
+              <span style="font-weight: 800; font-size: 13px; color: #fff;">${o.label}</span>
+            </div>
+            <span class="outcome-points-badge ${o.points < 0 ? 'negative' : 'positive'} ${isHH && o.points > 0 ? 'happy-hour-glow' : ''}">
+              ${outcomePts > 0 ? `+${outcomePts}` : outcomePts} Pkt${isHH && o.points > 0 ? ' ⚡ 2X' : ''}
+            </span>
           </div>
-          <span class="outcome-points-badge ${o.points < 0 ? 'negative' : 'positive'}">
-            ${o.points > 0 ? `+${o.points}` : o.points} Pkt
-          </span>
-        </div>
-      `).join("");
+        `;
+      }).join("");
     }
 
     this.updatePointsPreview();
@@ -314,24 +330,29 @@ const QuestsModule = {
     const pointsEl = document.getElementById("modalQuestPoints");
     if (!pointsEl) return;
 
+    const isHH = window.store && window.store.isHappyHourActive();
+    const multiplier = isHH ? 2 : 1;
+
     let basePoints = this.activeQuest.points;
     if (this.selectedOutcomeId && this.activeQuest.outcomes) {
       const outcome = this.activeQuest.outcomes.find(o => o.id === this.selectedOutcomeId);
       if (outcome) basePoints = outcome.points;
     }
 
-    let finalPoints = basePoints;
-    if (this.isFaithBased) {
-      if (basePoints > 0) {
-        finalPoints = Math.round(basePoints * 0.8);
-      }
+    let calculatedPoints = basePoints;
+    if (this.isFaithBased && basePoints > 0) {
+      calculatedPoints = Math.round(basePoints * 0.8);
     }
+
+    let finalPoints = calculatedPoints > 0 ? (calculatedPoints * multiplier) : calculatedPoints;
 
     if (finalPoints < 0) {
       pointsEl.textContent = `${finalPoints} PKT (MALUS)`;
       pointsEl.style.color = "#ef4444";
     } else {
-      pointsEl.textContent = `+${finalPoints} XP / PKT ${this.isFaithBased ? '(-20% Ehren-Abzug)' : ''}`;
+      const hhSuffix = isHH ? ' ⚡ 2X HAPPY HOUR!' : '';
+      const faithSuffix = this.isFaithBased ? ' (-20% Ehren-Abzug)' : '';
+      pointsEl.textContent = `+${finalPoints} XP / PKT${hhSuffix}${faithSuffix}`;
       pointsEl.style.color = "var(--walibi-yellow)";
     }
   },

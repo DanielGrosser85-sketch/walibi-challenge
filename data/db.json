@@ -5,47 +5,16 @@
       "name": "grossek",
       "house": "Haus 1",
       "avatar": "assets/avatar_belaestigungspanda.jpg",
-      "points": 1090,
-      "drinksCount": 24,
-      "completedQuests": [
-        "coaster_lost_gravity",
-        "coaster_untamed",
-        "visitor_queue_diplomat"
-      ],
-      "completedSideQuests": [
-        "side_longdrink_master_5",
-        "side_drink_marathon_10",
-        "side_beer_king_5",
-        "side_drink_marathon_15",
-        "side_beer_king_10",
-        "side_yoy_duo",
-        "side_coaster_marathon_5",
-        "side_untamed_master",
-        "side_drink_marathon_20",
-        "side_goliath_king",
-        "side_coaster_marathon_10",
-        "side_lost_gravity_3",
-        "side_water_combo",
-        "side_shot_duo"
-      ],
-      "rideCounts": {
-        "attr_lost_gravity": 3,
-        "attr_yoy_chill": 1,
-        "attr_yoy_thrill": 1,
-        "attr_untamed": 3,
-        "attr_goliath": 3,
-        "attr_speed_of_sound": 1,
-        "attr_condor": 1,
-        "attr_eat_my_dust": 1,
-        "attr_crazy_river": 1,
-        "attr_el_rio_grande": 1,
-        "attr_splash_battle": 1
-      },
+      "points": 0,
+      "drinksCount": 0,
+      "completedQuests": [],
+      "completedSideQuests": [],
+      "rideCounts": {},
       "drinksDetail": {
-        "beer": 11,
-        "shot": 3,
-        "longdrink": 9,
-        "joint": 1,
+        "beer": 0,
+        "shot": 0,
+        "longdrink": 0,
+        "joint": 0,
         "water": 0
       },
       "gutGlaubenCount": 0,
@@ -58,31 +27,7 @@
     "Haus 2",
     "Haus 3"
   ],
-  "feed": [
-    {
-      "id": "feed_achieve_p_1786747056481_o5jo_side_shot_duo",
-      "type": "achievement",
-      "userId": "p_1786747056481_o5jo",
-      "userName": "grossek",
-      "userAvatar": "assets/avatar_belaestigungspanda.jpg",
-      "userHouse": "Haus 1",
-      "achievementId": "side_shot_duo",
-      "achievementTitle": "Doppel-Shot Salve 🥃 (3 Shots)",
-      "achievementDesc": "Verbringe 3 Shots über den Tag verteilt im Pegel-Tracker.",
-      "achievementIcon": "🥃",
-      "points": 30,
-      "actualPointsAwarded": 30,
-      "timestamp": "2026-08-17T21:37:35.853Z",
-      "reactions": {
-        "🔥": [],
-        "🍺": [],
-        "👑": [],
-        "💀": [],
-        "👏": []
-      },
-      "comments": []
-    }
-  ],
+  "feed": [],
   "happyHour": {
     "active": false,
     "endsAt": null,
@@ -91,8 +36,8 @@
   "gameStatus": {
     "isRunning": true,
     "isEnded": false,
-    "startedAt": "2026-08-17T21:36:38.361Z"
+    "startedAt": "2026-08-17T22:14:22.483Z"
   },
-  "version": 176,
+  "version": 194,
   "sympathyVotes": {}
 }

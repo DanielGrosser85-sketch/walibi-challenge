@@ -331,7 +331,23 @@ const FeedModule = {
     const container = document.getElementById("dashboardDrinksTrackerRow");
     if (!container) return;
 
-    const currentUser = window.store ? window.store.state.currentUser : null;
+    let currentUser = window.store && window.store.state ? window.store.state.currentUser : null;
+    if (!currentUser) {
+      const savedId = localStorage.getItem("walibi_active_user_id") || localStorage.getItem("walibi_current_user_id");
+      if (savedId && window.store && window.store.state && Array.isArray(window.store.state.players)) {
+        currentUser = window.store.state.players.find(p => p.id === savedId);
+      }
+    }
+    if (!currentUser && window.ProfileModule && window.ProfileModule.isAdminUser && window.ProfileModule.isAdminUser()) {
+      currentUser = window.store && window.store.state && window.store.state.players.find(p => p.name.toLowerCase() === "grossek");
+    }
+    if (!currentUser && window.store && window.store.state && Array.isArray(window.store.state.players) && window.store.state.players.length > 0) {
+      currentUser = window.store.state.players[0];
+    }
+    if (currentUser && window.store && window.store.state) {
+      window.store.state.currentUser = currentUser;
+    }
+
     const details = (currentUser && currentUser.drinksDetail) || { beer: 0, shot: 0, longdrink: 0, joint: 0, water: 0 };
     const total = (currentUser && currentUser.drinksCount) || 0;
 
@@ -384,7 +400,7 @@ const FeedModule = {
         </div>
 
         <div class="drinks-tracker-grid">
-          <div class="tracker-item-pill" onclick="CounterModule.logItem('beer')" title="+1 Bier">
+          <div class="tracker-item-pill" onclick="CounterModule.logItem('beer')" title="+1 Bier / Radler (+5 Pkt)">
             <span class="tracker-item-icon">🍺</span>
             <div class="tracker-item-info">
               <span class="tracker-item-name">Bier</span>
@@ -393,7 +409,7 @@ const FeedModule = {
             <span class="tracker-item-add-btn">+</span>
           </div>
 
-          <div class="tracker-item-pill" onclick="CounterModule.logItem('shot')" title="+1 Shot">
+          <div class="tracker-item-pill" onclick="CounterModule.logItem('shot')" title="+1 Shot / Schnaps (+15 Pkt)">
             <span class="tracker-item-icon">🥃</span>
             <div class="tracker-item-info">
               <span class="tracker-item-name">Shot</span>
@@ -402,7 +418,7 @@ const FeedModule = {
             <span class="tracker-item-add-btn">+</span>
           </div>
 
-          <div class="tracker-item-pill" onclick="CounterModule.logItem('longdrink')" title="+1 Longdrink">
+          <div class="tracker-item-pill" onclick="CounterModule.logItem('longdrink')" title="+1 Longdrink / Mix (+10 Pkt)">
             <span class="tracker-item-icon">🍹</span>
             <div class="tracker-item-info">
               <span class="tracker-item-name">Longdrink</span>
@@ -411,11 +427,20 @@ const FeedModule = {
             <span class="tracker-item-add-btn">+</span>
           </div>
 
-          <div class="tracker-item-pill" onclick="CounterModule.logItem('joint')" title="+1 Joint">
+          <div class="tracker-item-pill" onclick="CounterModule.logItem('joint')" title="+1 Joint / Kraut (+10 Pkt)">
             <span class="tracker-item-icon">🌿</span>
             <div class="tracker-item-info">
               <span class="tracker-item-name">Joint</span>
               <span class="tracker-item-count" id="count_joint">${jointCount}x</span>
+            </div>
+            <span class="tracker-item-add-btn">+</span>
+          </div>
+
+          <div class="tracker-item-pill" onclick="CounterModule.logItem('water')" title="+1 Wasser / Soft (+2 Pkt)">
+            <span class="tracker-item-icon">🥤</span>
+            <div class="tracker-item-info">
+              <span class="tracker-item-name">Wasser</span>
+              <span class="tracker-item-count" id="count_water">${details.water || 0}x</span>
             </div>
             <span class="tracker-item-add-btn">+</span>
           </div>
@@ -620,7 +645,9 @@ const FeedModule = {
         if (item.points < 0) {
           pointsBadgeHtml = `<div class="feed-points-badge penalty">${item.points} Pkt</div>`;
         } else {
-          pointsBadgeHtml = `<div class="feed-points-badge">+${item.actualPointsAwarded !== undefined ? item.actualPointsAwarded : item.points} Pkt</div>`;
+          const awarded = item.actualPointsAwarded !== undefined ? item.actualPointsAwarded : item.points;
+          const hhBadge = item.isHappyHour ? ` <span style="color: #ffcc00; font-size: 10px; font-weight: 900; margin-left: 2px;">⚡ 2X</span>` : '';
+          pointsBadgeHtml = `<div class="feed-points-badge ${item.isHappyHour ? 'feed-points-happyhour' : ''}">+${awarded} Pkt${hhBadge}</div>`;
         }
       }
 
@@ -694,7 +721,7 @@ const FeedModule = {
                 <span class="drink-big-icon">${item.itemIcon || '🍺'}</span>
                 <div>
                   <div class="drink-log-title"><strong>${item.userName}</strong> hat sich 1x <strong>${item.itemName}</strong> gegönnt!</div>
-                  <div class="drink-points-tag">+${item.points} Punkte auf's Partykonto</div>
+                  <div class="drink-points-tag">+${item.points} Punkte auf's Partykonto${item.isHappyHour ? ' ⚡ (2X HAPPY HOUR!)' : ''}</div>
                 </div>
               </div>
             `}

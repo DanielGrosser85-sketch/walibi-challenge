@@ -322,7 +322,7 @@ function handleApiRequest(pathname, req, res) {
     return;
   }
 
-  // POST /api/attraction/log (Achterbahn-Fahrt zählen)
+  // POST /api/attraction/log (Achterbahn-Fahrt zählen - 2x bei Happy Hour)
   if (pathname === '/api/attraction/log' && req.method === 'POST') {
     parseJsonBody(req, (err, data) => {
       if (err || !data.userId || !data.attrId) {
@@ -344,10 +344,13 @@ function handleApiRequest(pathname, req, res) {
       const newCount = Math.max(0, current + delta);
       player.rideCounts[data.attrId] = newCount;
 
+      const multiplier = getPointsMultiplier();
+      const pointsPerRide = 5 * multiplier;
+
       if (delta > 0) {
-        player.points = (player.points || 0) + (5 * delta);
+        player.points = (player.points || 0) + (pointsPerRide * delta);
       } else if (delta < 0 && current > 0) {
-        player.points = Math.max(0, (player.points || 0) + (5 * delta));
+        player.points = Math.max(0, (player.points || 0) + (pointsPerRide * delta));
       }
 
       saveDb();
@@ -393,9 +396,13 @@ function handleApiRequest(pathname, req, res) {
 
       const requiresVoting = data.requiresVoting === true;
       const requiresWitnessPending = data.requiresWitnessPending === true;
-      let rawPoints = typeof data.points === 'number' ? data.points : 0;
       const multiplier = getPointsMultiplier();
-      const points = rawPoints > 0 ? (rawPoints * multiplier) : rawPoints;
+      let basePoints = typeof data.basePoints === 'number' ? data.basePoints : (typeof data.points === 'number' ? data.points : 0);
+      let calculatedPoints = basePoints;
+      if (isFaithBased && basePoints > 0) {
+        calculatedPoints = Math.round(basePoints * 0.8);
+      }
+      const points = calculatedPoints > 0 ? (calculatedPoints * multiplier) : calculatedPoints;
 
       let initialPoints = 0;
       if (points < 0) {
@@ -447,7 +454,7 @@ function handleApiRequest(pathname, req, res) {
         questDescription: data.questDescription,
         questIcon: data.questIcon || "🎯",
         points: points,
-        basePoints: data.basePoints || rawPoints,
+        basePoints: basePoints,
         actualPointsAwarded: initialPoints,
         selectedOutcome: data.selectedOutcome || null,
         isFaithBased: isFaithBased,
@@ -549,8 +556,9 @@ function handleApiRequest(pathname, req, res) {
 
       const isVideo = photoUrl && (photoUrl.endsWith('.mp4') || photoUrl.endsWith('.webm') || photoUrl.endsWith('.mov'));
       // 5 Punkte für einfache Text-Nachricht, 10 Punkte für Bild / Video (2x bei Happy Hour)
+      const multiplier = getPointsMultiplier();
       const basePoints = photoUrl ? 10 : 5;
-      const points = basePoints * getPointsMultiplier();
+      const points = basePoints * multiplier;
       player.points = (player.points || 0) + points;
 
       const feedItem = {
@@ -564,7 +572,9 @@ function handleApiRequest(pathname, req, res) {
         photo: photoUrl,
         isVideo: isVideo,
         points: points,
+        basePoints: basePoints,
         actualPointsAwarded: points,
+        isHappyHour: multiplier > 1,
         timestamp: new Date().toISOString(),
         reactions: { "🔥": [], "🍺": [], "👑": [], "💀": [], "👏": [] },
         comments: []
@@ -651,8 +661,9 @@ function handleApiRequest(pathname, req, res) {
       }
 
       const sq = data.achievement;
-      const basePoints = sq.points || 25;
-      const points = basePoints * getPointsMultiplier();
+      const multiplier = getPointsMultiplier();
+      const basePoints = typeof data.basePoints === 'number' ? data.basePoints : (sq.points || 25);
+      const points = typeof data.points === 'number' ? data.points : (basePoints * multiplier);
 
       const feedItem = data.feedItem || {
         id: "feed_achieve_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
@@ -668,10 +679,14 @@ function handleApiRequest(pathname, req, res) {
         points: points,
         basePoints: basePoints,
         actualPointsAwarded: points,
+        isHappyHour: multiplier > 1,
         timestamp: new Date().toISOString(),
         reactions: { "🔥": [], "🍺": [], "👑": [], "💀": [], "👏": [] },
         comments: []
       };
+      feedItem.points = points;
+      feedItem.actualPointsAwarded = points;
+      feedItem.isHappyHour = multiplier > 1;
 
       // Duplikate im Feed vermeiden
       const alreadyExists = db.feed.some(f => f.userId === player.id && f.achievementId === sq.id);

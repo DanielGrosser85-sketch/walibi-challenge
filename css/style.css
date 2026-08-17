@@ -4247,6 +4247,28 @@ body {
   white-space: nowrap;
 }
 
+/* --- ⚡ 2X HAPPY HOUR BADGES & GLOW EFFECTS --- */
+.happy-hour-glow {
+  background: linear-gradient(135deg, #f59e0b, #e11d48) !important;
+  color: #fff !important;
+  border-color: #ffcc00 !important;
+  box-shadow: 0 0 12px rgba(255, 204, 0, 0.6) !important;
+  font-weight: 900 !important;
+  animation: hhPulseBadge 2s infinite alternate ease-in-out;
+}
+
+@keyframes hhPulseBadge {
+  0% { transform: scale(1); box-shadow: 0 0 8px rgba(255, 204, 0, 0.4); }
+  100% { transform: scale(1.04); box-shadow: 0 0 16px rgba(255, 204, 0, 0.85); }
+}
+
+.feed-points-happyhour {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.35), rgba(225, 29, 72, 0.35)) !important;
+  border-color: #ffcc00 !important;
+  color: #ffcc00 !important;
+  box-shadow: 0 0 10px rgba(255, 204, 0, 0.4);
+}
+
 /* ==================================================== */
 /* 💖 EISBRECHER & SYMPATHIE-VOTING STYLES             */
 /* ==================================================== */

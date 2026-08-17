@@ -70,16 +70,29 @@ const ParkGuideModule = {
     let totalRides = 0;
     Object.values(rideCounts).forEach(c => totalRides += Number(c || 0));
 
+    const isHH = window.store && window.store.isHappyHourActive();
+    const multiplier = isHH ? 2 : 1;
+
     const htmlContent = `
       <div class="subtabs-row" style="margin-bottom: 12px;">
         <button class="subtab-btn ${isAttractions ? 'active' : ''}" onclick="ParkGuideModule.switchTab('attractions')">🎢 Alle ${attractions.length} Attraktionen</button>
         <button class="subtab-btn ${isSidequests ? 'active' : ''}" onclick="ParkGuideModule.switchTab('sidequests')">⭐ Nebenquests (${sideQuests.length})</button>
       </div>
 
+      ${isHH ? `
+        <div style="background: linear-gradient(135deg, rgba(255,204,0,0.25), rgba(225,29,72,0.25)); border: 2px solid var(--walibi-yellow); padding: 10px 14px; border-radius: 12px; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; box-shadow: 0 0 15px rgba(255,204,0,0.3);">
+          <span style="font-size: 24px;">⚡🎢</span>
+          <div>
+            <div style="font-size: 13px; font-weight: 900; color: #ffcc00; text-transform: uppercase;">2X Happy Hour aktiv!</div>
+            <div style="font-size: 11px; color: #fff; font-weight: 700;">Achterbahn-Fahrten geben jetzt <strong>+10 Punkte</strong> & Nebenquests zählen doppelt!</div>
+          </div>
+        </div>
+      ` : ''}
+
       <!-- COUNTER SUMMARY BANNER -->
       <div style="display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, rgba(255,204,0,0.2), rgba(225,29,72,0.2)); border: 2px solid var(--walibi-yellow); padding: 8px 12px; border-radius: 12px; margin-bottom: 14px;">
         <span style="font-size: 13px; font-weight: 800; color: #fff;">Gesamt-Fahrten von ${currentUser ? currentUser.name : 'dir'}:</span>
-        <span class="points-badge" style="font-size: 15px;">${totalRides} Fahrten</span>
+        <span class="points-badge" style="font-size: 15px;">${totalRides} Fahrten (+${5 * multiplier} Pkt/Fahrt)</span>
       </div>
 
       ${isAttractions ? `
@@ -180,6 +193,8 @@ const ParkGuideModule = {
           ${sideQuests.map(sq => {
             const status = window.store ? window.store.getSideQuestStatus(sq.id, currentUser) : { isCompleted: false, percent: 0, progressText: "" };
             const isDone = status.isCompleted || completedSideQuests.includes(sq.id);
+            const basePts = typeof sq.points === 'number' ? sq.points : 25;
+            const displayPts = basePts * multiplier;
             return `
               <div class="sidequest-card ${isDone ? 'completed' : ''}">
                 <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 8px; gap: 8px;">
@@ -189,7 +204,7 @@ const ParkGuideModule = {
                     </h4>
                     <p style="font-size: 12px; color: var(--text-muted); font-weight: 600; line-height: 1.35;">${sq.desc}</p>
                   </div>
-                  <span class="points-badge" style="white-space: nowrap;">+${sq.points} Pkt</span>
+                  <span class="points-badge ${isHH ? 'happy-hour-glow' : ''}" style="white-space: nowrap;">+${displayPts} Pkt${isHH ? ' ⚡ 2X' : ''}</span>
                 </div>
 
                 <!-- LIVE FORTSCHRITTSBALKEN -->
@@ -206,7 +221,7 @@ const ParkGuideModule = {
                 <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 6px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
                   ${isDone ? `
                     <span style="font-size: 12px; font-weight: 900; color: #34d399; display: flex; align-items: center; gap: 4px;">
-                      ✅ <strong>Gemeistert</strong> (+${sq.points} Pkt)
+                      ✅ <strong>Gemeistert</strong> (+${displayPts} Pkt)
                     </span>
                     <button type="button" class="btn-secondary" style="padding: 4px 8px; font-size: 10px; border-radius: 6px; background: rgba(255,255,255,0.08); color: var(--text-dim); border: 1px solid rgba(255,255,255,0.15);" onclick="ParkGuideModule.toggleSideQuest('${sq.id}')">
                       Rückgängig
@@ -255,8 +270,11 @@ const ParkGuideModule = {
     const attr = attractions.find(a => a.id === attrId);
     const attrName = attr ? attr.name : "Achterbahn";
 
+    const multiplier = window.store ? window.store.getPointsMultiplier() : 1;
+    const pts = 5 * multiplier;
+
     if (delta > 0 && window.app && window.app.showToast) {
-      window.app.showToast(`🎢 +5 Punkte für deine ${newCount}. Fahrt mit <strong>${attrName}</strong>!`);
+      window.app.showToast(`🎢 +${pts} Punkte${multiplier > 1 ? ' (⚡ 2X Happy Hour!)' : ''} für deine ${newCount}. Fahrt mit <strong>${attrName}</strong>!`);
     } else if (delta < 0 && window.app && window.app.showToast) {
       window.app.showToast(`↩️ Fahrt mit <strong>${attrName}</strong> angepasst (${newCount}x)`);
     }
@@ -276,19 +294,23 @@ const ParkGuideModule = {
     const sideQuests = window.SIDE_QUESTS || [];
     const sq = sideQuests.find(s => s.id === sideQuestId);
 
+    const multiplier = window.store ? window.store.getPointsMultiplier() : 1;
+    const basePts = (sq ? sq.points : 20);
+    const earnedPts = basePts * multiplier;
+
     if (!currentUser.completedSideQuests.includes(sideQuestId)) {
       currentUser.completedSideQuests.push(sideQuestId);
-      currentUser.points += (sq ? sq.points : 20);
+      currentUser.points += earnedPts;
 
       if (window.GameAudio) window.GameAudio.playFanfare();
       if (window.app && window.app.fireConfetti) window.app.fireConfetti();
       if (window.app && window.app.showToast) {
-        window.app.showToast(`🎉 Nebenquest gemeistert! +${sq ? sq.points : 20} Punkte gutgeschrieben!`);
+        window.app.showToast(`🎉 Nebenquest gemeistert! +${earnedPts} Punkte${multiplier > 1 ? ' (⚡ 2X Happy Hour!)' : ''} gutgeschrieben!`);
       }
     } else {
       // Toggle off
       currentUser.completedSideQuests = currentUser.completedSideQuests.filter(id => id !== sideQuestId);
-      currentUser.points = Math.max(0, currentUser.points - (sq ? sq.points : 20));
+      currentUser.points = Math.max(0, currentUser.points - earnedPts);
       if (window.app && window.app.showToast) {
         window.app.showToast(`↩️ Nebenquest zurückgesetzt.`);
       }

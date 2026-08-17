@@ -199,10 +199,20 @@ const ProfileModule = {
   // --- 👑 ADMIN-FUNKTIONEN (NUR FÜR GROSSEK) ---
   openAdminModal() {
     if (!this.isAdminUser()) {
-      if (window.app && window.app.showToast) {
-        window.app.showToast("🔒 Admin-Bereich ist ausschließlich für <strong>grossek</strong> zugänglich!");
+      const code = prompt("👑 Admin-PIN eingeben (grossek):");
+      if (code === "1008") {
+        this.activateAdminMode();
+        localStorage.setItem("walibi_access_code", "1008");
+        this.updateHeaderProfile();
+        if (window.app && window.app.showToast) {
+          window.app.showToast("👑 Admin-Modus für <strong>grossek</strong> freigeschaltet!");
+        }
+      } else {
+        if (code !== null && window.app && window.app.showToast) {
+          window.app.showToast("❌ Falscher Admin-PIN!");
+        }
+        return;
       }
-      return;
     }
     if (window.GameAudio) window.GameAudio.playClick();
     this.updateAdminHappyHourUI();
@@ -601,28 +611,45 @@ const ProfileModule = {
 
   // --- 1. BENUTZER SICHERSTELLEN ---
   ensureCurrentUser() {
-    const savedUserId = localStorage.getItem("walibi_active_user_id");
     const state = window.store ? window.store.state : null;
     if (!state) return;
 
-    // Wenn ein Spieler im LocalStorage liegt und es nicht Grossek ist
+    // A) Wenn Admin (Code 1008), dann Grossek als User sicherstellen
+    if (this.isAdminUser()) {
+      let grossek = state.players ? state.players.find(p => p.name.toLowerCase() === "grossek") : null;
+      if (!grossek && window.store) {
+        grossek = window.store.addPlayer("grossek", "Haus 1", "assets/mascot_fox.jpg");
+      }
+      if (grossek) {
+        state.currentUser = grossek;
+        localStorage.setItem("walibi_active_user_id", grossek.id);
+        localStorage.setItem("walibi_current_user_id", grossek.id);
+      }
+      return;
+    }
+
+    // B) Wenn regulärer Spieler (Code 6969)
+    const savedUserId = localStorage.getItem("walibi_active_user_id") || localStorage.getItem("walibi_current_user_id");
     if (savedUserId && state.players && state.players.length > 0) {
       const found = state.players.find(p => p.id === savedUserId);
-      if (found && found.name.toLowerCase() !== "grossek") {
+      if (found) {
         state.currentUser = found;
         return;
       }
     }
 
-    if (state.currentUser && state.currentUser.name && state.currentUser.name.toLowerCase() !== "grossek") {
+    if (state.currentUser) {
       localStorage.setItem("walibi_active_user_id", state.currentUser.id);
+      localStorage.setItem("walibi_current_user_id", state.currentUser.id);
       return;
     }
 
-    // Kein eigener Spieler vorhanden oder bisher Grossek gewählt -> Profil-Auswahl bzw. Neuer Spieler anlegen öffnen!
-    state.currentUser = null;
-    localStorage.removeItem("walibi_active_user_id");
-    this.openProfileSelectModal();
+    // Falls noch kein Spieler aktiv ist:
+    if (state.players && state.players.length > 0) {
+      this.openProfileSelectModal();
+    } else {
+      this.openCreatePlayerModal();
+    }
   },
 
   setupProfileTrigger() {
@@ -719,6 +746,22 @@ const ProfileModule = {
     const avatarEl = document.getElementById("myProfileAvatarPreview");
     if (avatarEl) avatarEl.src = avatarUrl;
     this.renderAvatarPresetGrid("myProfileAvatarPresetGrid", avatarUrl, (url) => this.setQuickAvatar(url));
+
+    // Direkt im Profil des aktiven Spielers mitspeichern
+    const user = window.store && window.store.state ? window.store.state.currentUser : null;
+    if (user && user.id) {
+      user.avatar = avatarUrl;
+      if (window.store) {
+        const pIdx = window.store.state.players.findIndex(p => p.id === user.id);
+        if (pIdx >= 0) window.store.state.players[pIdx].avatar = avatarUrl;
+        window.store.saveLocalState();
+        if (window.store.updateProfile) {
+          window.store.updateProfile(user.id, { avatar: avatarUrl }).catch(() => {});
+        }
+      }
+      this.updateHeaderProfile();
+      if (window.app) window.app.renderAllViews();
+    }
   },
 
   renderAvatarPresetGrid(containerId, activeUrl, onSelect) {
@@ -801,12 +844,16 @@ const ProfileModule = {
       html += items.map(c => `
         <div class="lore-card" id="lore_card_${c.id}">
           <div class="lore-card-header">
-            <img src="${c.avatar}" class="lore-card-avatar" alt="${c.name}" />
+            <div class="lore-card-avatar-wrap" onclick="ProfileModule.openAvatarLensModal('${c.id}')" title="🔍 Tippen zum Vergrößern (Lupe)">
+              <img src="${c.avatar}" class="lore-card-avatar" alt="${c.name}" />
+              <span class="lore-avatar-lens-btn">🔍</span>
+            </div>
             <div style="flex: 1;">
               <div class="lore-card-title">${c.icon || '🎭'} ${c.name}</div>
               <div class="lore-card-subtitle">${c.subtitle || ''}</div>
+              <div style="font-size: 11px; color: var(--walibi-yellow); font-weight: 700; margin-top: 3px; cursor: pointer;" onclick="ProfileModule.openAvatarLensModal('${c.id}')">🔍 Tippe Bild für Lupe</div>
             </div>
-            <button type="button" onclick="ProfileModule.quickPickLoreAvatar('${c.avatar}', '${c.name}')" class="btn-primary" style="padding: 6px 10px; font-size: 11px; width: auto; background: var(--gradient-gold); color: #000; font-weight: 900; border: 1.5px solid #fff;">
+            <button type="button" onclick="ProfileModule.quickPickLoreAvatar('${c.id}')" class="btn-primary" style="padding: 9px 14px; font-size: 13px; width: auto; background: var(--gradient-gold); color: #000; font-weight: 900; border: 2px solid #fff; box-shadow: 0 0 12px rgba(255,204,0,0.5);">
               Wählen 👉
             </button>
           </div>
@@ -836,22 +883,83 @@ const ProfileModule = {
     container.innerHTML = html;
   },
 
-  quickPickLoreAvatar(avatarUrl, charName) {
-    if (window.GameAudio) window.GameAudio.playReward();
-    const modal = document.getElementById("characterLoreModal");
-    if (modal) modal.classList.add("hidden");
+  openAvatarLensModal(charId) {
+    if (window.GameAudio) window.GameAudio.playClick();
+    const modal = document.getElementById("avatarLensLightboxModal");
+    if (!modal) return;
 
-    // Falls gerade Profil bearbeiten offen ist:
-    const myProfileModal = document.getElementById("myProfileModal");
-    if (myProfileModal && !myProfileModal.classList.contains("hidden")) {
-      this.setQuickAvatar(avatarUrl);
-      if (window.app && window.app.showToast) {
-        window.app.showToast(`✨ Avatar auf <strong>${charName}</strong> gesetzt!`);
+    let char = (window.WALIBI_CHARACTER_LORE || []).find(c => c.id === charId);
+    if (!char) {
+      const preset = (window.WALIBI_AVATAR_PRESETS || []).find(p => p.id === charId);
+      if (preset) {
+        char = {
+          id: preset.id,
+          name: preset.name,
+          subtitle: "Kult-Avatar",
+          avatar: preset.url,
+          quote: "Ready for Walibi Holland '26!"
+        };
       }
-      return;
+    }
+    if (!char) return;
+
+    const imgEl = document.getElementById("lensModalAvatarImg");
+    const titleEl = document.getElementById("lensModalAvatarTitle");
+    const subEl = document.getElementById("lensModalAvatarSubtitle");
+    const quoteEl = document.getElementById("lensModalAvatarQuote");
+    const btnPick = document.getElementById("btnLensModalPick");
+
+    if (imgEl) imgEl.src = char.avatar;
+    if (titleEl) titleEl.textContent = `${char.icon || '🎭'} ${char.name}`;
+    if (subEl) subEl.textContent = char.subtitle || '';
+    if (quoteEl) quoteEl.textContent = `💬 "${char.quote || ''}"`;
+
+    if (btnPick) {
+      btnPick.onclick = () => {
+        this.closeAvatarLensModal();
+        this.quickPickLoreAvatar(char.id);
+      };
     }
 
-    // Falls Spieler-Erstellung offen ist:
+    modal.classList.remove("hidden");
+  },
+
+  closeAvatarLensModal() {
+    if (window.GameAudio) window.GameAudio.playClick();
+    const modal = document.getElementById("avatarLensLightboxModal");
+    if (modal) modal.classList.add("hidden");
+  },
+
+  async quickPickLoreAvatar(charIdOrUrl, optName = null) {
+    try {
+      if (window.GameAudio && window.GameAudio.playReward) window.GameAudio.playReward();
+    } catch(e) {}
+    try {
+      if (window.app && window.app.fireConfetti) window.app.fireConfetti();
+    } catch(e) {}
+    
+    let avatarUrl = charIdOrUrl;
+    let charName = optName || "Avatar";
+
+    const lore = (window.WALIBI_CHARACTER_LORE || []).find(c => c.id === charIdOrUrl);
+    if (lore) {
+      avatarUrl = lore.avatar;
+      charName = lore.name;
+    } else {
+      const preset = (window.WALIBI_AVATAR_PRESETS || []).find(p => p.id === charIdOrUrl || p.url === charIdOrUrl);
+      if (preset) {
+        avatarUrl = preset.url;
+        charName = preset.name;
+      }
+    }
+
+    // 1. Alle Modale schließen
+    ["characterLoreModal", "avatarLensLightboxModal", "myProfileModal", "quickMenuModal"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.add("hidden");
+    });
+
+    // 2. Falls "Neuer Spieler" Modal offen ist:
     const createModal = document.getElementById("createPlayerModal");
     if (createModal && !createModal.classList.contains("hidden")) {
       this.capturedNewAvatarBase64 = avatarUrl;
@@ -862,23 +970,62 @@ const ProfileModule = {
       }
       this.renderAvatarPresetGrid("newPlayerAvatarPresetGrid", avatarUrl, null);
       if (window.app && window.app.showToast) {
-        window.app.showToast(`✨ Avatar für neuen Spieler ausgewählt: <strong>${charName}</strong>`);
+        window.app.showToast(`✨ Avatar <strong>${charName}</strong> für neuen Spieler gewählt!`);
       }
       return;
     }
 
-    // Wenn kein Modal offen war: ins Profil übertragen und speichern
-    const currentUser = window.store ? window.store.state.currentUser : null;
-    if (currentUser) {
-      currentUser.avatar = avatarUrl;
-      if (window.store) window.store.updatePlayer(currentUser);
+    // 3. Aktiven Spieler ermitteln
+    let user = window.store && window.store.state ? window.store.state.currentUser : null;
+    
+    if (!user && window.store && window.store.state && Array.isArray(window.store.state.players)) {
+      const activeId = localStorage.getItem("walibi_active_user_id") || localStorage.getItem("walibi_current_user_id");
+      if (activeId) {
+        user = window.store.state.players.find(p => p.id === activeId);
+        if (user) window.store.state.currentUser = user;
+      }
+      if (!user && this.isAdminUser()) {
+        user = window.store.state.players.find(p => p.name.toLowerCase() === "grossek");
+        if (user) window.store.state.currentUser = user;
+      }
+    }
+
+    if (user && user.id) {
+      user.avatar = avatarUrl;
+      this.capturedEditAvatarBase64 = avatarUrl;
+
+      // Direkt lokal & persistent speichern
+      if (window.store) {
+        const pIdx = window.store.state.players.findIndex(p => p.id === user.id);
+        if (pIdx >= 0) window.store.state.players[pIdx].avatar = avatarUrl;
+        window.store.state.currentUser = user;
+        window.store.saveLocalState();
+        
+        // Asynchron an Server senden
+        if (window.store.updateProfile) {
+          window.store.updateProfile(user.id, { avatar: avatarUrl }).catch(() => {});
+        }
+      }
+
+      // UI sofort an allen Stellen aktualisieren
       this.updateHeaderProfile();
+      const myAvatarPreview = document.getElementById("myProfileAvatarPreview");
+      if (myAvatarPreview) myAvatarPreview.src = avatarUrl;
+      const headerAvatar = document.getElementById("headerUserAvatar");
+      if (headerAvatar) headerAvatar.src = avatarUrl;
+
+      if (window.app) window.app.renderAllViews();
+
+      // Bestätigungs-Meldung
       if (window.app && window.app.showToast) {
-        window.app.showToast(`✨ Dein Avatar wurde auf <strong>${charName}</strong> geändert!`);
+        window.app.showToast(`🎉 <strong>Avatar bestätigt!</strong> Du spielst jetzt als <strong>${charName}</strong>!`);
       }
     } else {
-      this.openMyProfileModal();
-      this.setQuickAvatar(avatarUrl);
+      // Wenn noch kein aktiver Spieler existiert: Neuer Spieler Erstellung mit diesem Avatar öffnen!
+      this.openCreatePlayerModal(avatarUrl);
+      if (window.app && window.app.showToast) {
+        window.app.showToast(`✨ Avatar <strong>${charName}</strong> gewählt. Bitte gib noch deinen Spielernamen ein!`);
+      }
     }
   },
 
@@ -903,7 +1050,7 @@ const ProfileModule = {
     modal.classList.remove("hidden");
   },
 
-  openCreatePlayerModal() {
+  openCreatePlayerModal(preselectedAvatar = null) {
     if (window.GameAudio) window.GameAudio.playClick();
     const selectModal = document.getElementById("profileSelectModal");
     const createModal = document.getElementById("createPlayerModal");
@@ -915,13 +1062,18 @@ const ProfileModule = {
       if (houseSelect && window.store) {
         houseSelect.innerHTML = (window.store.state.houses || ["Haus 1", "Haus 2", "Haus 3"]).map(h => `<option value="${h}">${h}</option>`).join("");
       }
-      this.capturedNewAvatarBase64 = null;
+      this.capturedNewAvatarBase64 = preselectedAvatar || null;
       const prev = document.getElementById("newPlayerAvatarPreview");
       if (prev) {
-        prev.src = "";
-        prev.classList.add("hidden");
+        if (preselectedAvatar) {
+          prev.src = preselectedAvatar;
+          prev.classList.remove("hidden");
+        } else {
+          prev.src = "";
+          prev.classList.add("hidden");
+        }
       }
-      this.renderAvatarPresetGrid("newPlayerAvatarPresetGrid", null, (url) => {
+      this.renderAvatarPresetGrid("newPlayerAvatarPresetGrid", preselectedAvatar, (url) => {
         this.capturedNewAvatarBase64 = url;
         if (prev) {
           prev.src = url;
@@ -1087,6 +1239,13 @@ const ProfileModule = {
     const galInp = document.getElementById("newPlayerGalleryInput");
     if (camInp) camInp.onchange = (e) => this.handleNewPlayerPhoto(e);
     if (galInp) galInp.onchange = (e) => this.handleNewPlayerPhoto(e);
+
+    // Klick außerhalb schließt geöffnete Lupen
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest(".lore-card-avatar-wrap")) {
+        document.querySelectorAll(".lore-card-avatar.is-zoomed").forEach(img => img.classList.remove("is-zoomed"));
+      }
+    });
   },
 
   handleEditProfilePhoto(event) {
@@ -1148,14 +1307,18 @@ const ProfileModule = {
     const avatarEl = document.getElementById("headerUserAvatar");
     const adminBtn = document.getElementById("btnAdminPanel");
     const menuAdminBtn = document.getElementById("menuAdminBtn");
-    const isGrossekAdmin = this.isAdminUser();
+    const menuHhBtn = document.getElementById("menuHappyHourBtn");
+    const isGrossekAdmin = this.isAdminUser() || (user && user.name && user.name.toLowerCase() === "grossek");
 
-    // KRONE & ADMIN BUTTONS NUR FÜR DEN ECHTEN ADMIN GROSSEK ANZEIGEN (NIEMALS FÜR ALEX ODER ANDERE SPIELER)
+    // KRONE IM HEADER IMMER ANZEIGEN (PIN 1008 GESICHERT)
     if (adminBtn) {
-      adminBtn.style.display = isGrossekAdmin ? "flex" : "none";
+      adminBtn.style.display = "flex";
     }
     if (menuAdminBtn) {
-      menuAdminBtn.style.display = isGrossekAdmin ? "flex" : "none";
+      menuAdminBtn.style.display = "flex";
+    }
+    if (menuHhBtn) {
+      menuHhBtn.style.display = "flex";
     }
 
     // Gast-Aufforderungs-Banner steuern
@@ -1297,7 +1460,13 @@ const ProfileModule = {
   },
 
   requireUser() {
-    if (!window.store || !window.store.state.currentUser) {
+    if (!window.store || !window.store.state) return false;
+
+    if (!window.store.state.currentUser) {
+      this.ensureCurrentUser();
+    }
+
+    if (!window.store.state.currentUser) {
       if (window.app && window.app.showToast) {
         window.app.showToast("⚠️ Bitte erstelle zuerst dein Spieler-Profil oder wähle deinen Namen!");
       }

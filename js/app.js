@@ -467,12 +467,11 @@ class MainApp {
     const modal = document.getElementById("quickMenuModal");
     if (!modal) return;
     
-    // Admin Buttons im Quick Menu prüfen – NUR für Admin
+    // Admin Buttons im Quick Menu immer anzeigen (gesichert mit PIN 1008)
     const adminBtn = document.getElementById("menuAdminBtn");
     const hhBtn = document.getElementById("menuHappyHourBtn");
-    const isGrossek = window.ProfileModule && window.ProfileModule.isAdminUser && window.ProfileModule.isAdminUser();
-    if (adminBtn) adminBtn.style.display = isGrossek ? "flex" : "none";
-    if (hhBtn) hhBtn.style.display = isGrossek ? "flex" : "none";
+    if (adminBtn) adminBtn.style.display = "flex";
+    if (hhBtn) hhBtn.style.display = "flex";
 
     // Sound Status aktualisieren
     const soundLbl = document.getElementById("menuSoundLabel");
