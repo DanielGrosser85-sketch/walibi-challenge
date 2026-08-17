@@ -142,6 +142,7 @@ class AppStore {
 
   // --- ECHTZEIT LIVE CLOUD-SYNC (SSE & REST) ---
   initCloudSync() {
+    this.lastServerFingerprint = "";
     this.fetchServerState();
     this.connectEventSource();
 
@@ -149,6 +150,18 @@ class AppStore {
     setInterval(() => {
       this.fetchServerState();
     }, 5000);
+  }
+
+  getStateFingerprint(db) {
+    if (!db) return "";
+    try {
+      const playersPart = (db.players || []).map(p => `${p.id}:${p.points}:${p.drinksCount}:${(p.completedQuests||[]).length}:${p.name}:${p.avatar}`).join("|");
+      const feedPart = (db.feed || []).map(f => `${f.id}:${(f.comments||[]).length}:${Object.keys(f.votes||{}).length}:${(f.actualPointsAwarded||0)}:${JSON.stringify(f.reactions||{})}`).join("|");
+      const gameStatus = db.gameStatus || "running";
+      return `${playersPart}###${feedPart}###${gameStatus}`;
+    } catch(e) {
+      return JSON.stringify(db);
+    }
   }
 
   async fetchServerState() {
@@ -194,6 +207,13 @@ class AppStore {
 
   mergeServerState(serverDb) {
     if (!serverDb) return;
+
+    const newFingerprint = this.getStateFingerprint(serverDb);
+    if (newFingerprint && newFingerprint === this.lastServerFingerprint) {
+      // Keine relevanten Änderungen vorhanden -> Re-Render überspringen, damit keine Eingabefelder springen
+      return;
+    }
+    this.lastServerFingerprint = newFingerprint;
 
     const savedUserId = localStorage.getItem(this.USER_KEY) || (this.state.currentUser ? this.state.currentUser.id : null);
 

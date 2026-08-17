@@ -282,6 +282,49 @@ const QuestsModule = {
     }
   },
 
+  openCamera() {
+    if (window.CameraModule) {
+      window.CameraModule.open({
+        title: this.activeQuest ? `📸 ${this.activeQuest.title}` : "📸 Walibi Live-Kamera",
+        facingMode: "environment",
+        onCapture: (b64, isVideo) => {
+          this.setCapturedPhoto(b64, isVideo);
+        }
+      });
+    }
+  },
+
+  setCapturedPhoto(b64, isVideo = false) {
+    this.capturedPhotoBase64 = b64;
+    const previewImg = document.getElementById("photoUploadPreview");
+    const previewVid = document.getElementById("videoUploadPreview");
+    const placeholder = document.getElementById("cameraPlaceholder");
+    const removeBtn = document.getElementById("btnRemovePhoto");
+
+    if (isVideo) {
+      if (previewImg) previewImg.classList.add("hidden");
+      if (previewVid) {
+        previewVid.src = b64;
+        previewVid.classList.remove("hidden");
+      }
+    } else {
+      if (previewVid) previewVid.classList.add("hidden");
+      if (previewImg) {
+        previewImg.src = b64;
+        previewImg.classList.remove("hidden");
+      }
+    }
+    if (placeholder) placeholder.classList.add("hidden");
+    if (removeBtn) removeBtn.classList.remove("hidden");
+
+    const submitBtn = document.getElementById("btnSubmitQuest");
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      const txt = submitBtn.querySelector(".arcade-btn-text");
+      if (txt) txt.textContent = "🚀 MISSION ABSCHLIESSEN! 🚀";
+    }
+  },
+
   removeCapturedPhoto() {
     this.capturedPhotoBase64 = null;
     const preview = document.getElementById("photoUploadPreview");
@@ -323,40 +366,17 @@ const QuestsModule = {
     const reader = new FileReader();
 
     if (isVideo) {
-      // VIDEO AUFNAHME / AUSWAHL
       reader.onload = (e) => {
-        const b64 = e.target.result;
-        this.capturedPhotoBase64 = b64;
-
-        const previewImg = document.getElementById("photoUploadPreview");
-        const previewVid = document.getElementById("videoUploadPreview");
-        const placeholder = document.getElementById("cameraPlaceholder");
-        const removeBtn = document.getElementById("btnRemovePhoto");
-
-        if (previewImg) previewImg.classList.add("hidden");
-        if (previewVid) {
-          previewVid.src = b64;
-          previewVid.classList.remove("hidden");
-        }
-        if (placeholder) placeholder.classList.add("hidden");
-        if (removeBtn) removeBtn.classList.remove("hidden");
-
-        const submitBtn = document.getElementById("btnSubmitQuest");
-        if (submitBtn) {
-          submitBtn.disabled = false;
-          const txt = submitBtn.querySelector(".arcade-btn-text");
-          if (txt) txt.textContent = "🚀 MISSION ABSCHLIESSEN! 🚀";
-        }
+        this.setCapturedPhoto(e.target.result, true);
       };
       reader.readAsDataURL(file);
     } else {
-      // FOTO AUFNAHME / KOMPRIMIERUNG
       reader.onload = (e) => {
         const img = new Image();
         img.onload = () => {
           const canvas = document.createElement("canvas");
           const ctx = canvas.getContext("2d");
-          const maxDim = 900;
+          const maxDim = 1080;
           let width = img.width;
           let height = img.height;
 
@@ -376,28 +396,8 @@ const QuestsModule = {
           canvas.height = height;
           ctx.drawImage(img, 0, 0, width, height);
 
-          const compressed = canvas.toDataURL("image/jpeg", 0.82);
-          this.capturedPhotoBase64 = compressed;
-
-          const previewImg = document.getElementById("photoUploadPreview");
-          const previewVid = document.getElementById("videoUploadPreview");
-          const placeholder = document.getElementById("cameraPlaceholder");
-          const removeBtn = document.getElementById("btnRemovePhoto");
-
-          if (previewVid) previewVid.classList.add("hidden");
-          if (previewImg) {
-            previewImg.src = compressed;
-            previewImg.classList.remove("hidden");
-          }
-          if (placeholder) placeholder.classList.add("hidden");
-          if (removeBtn) removeBtn.classList.remove("hidden");
-
-          const submitBtn = document.getElementById("btnSubmitQuest");
-          if (submitBtn) {
-            submitBtn.disabled = false;
-            const txt = submitBtn.querySelector(".arcade-btn-text");
-            if (txt) txt.textContent = "🚀 MISSION ABSCHLIESSEN! 🚀";
-          }
+          const compressed = canvas.toDataURL("image/jpeg", 0.85);
+          this.setCapturedPhoto(compressed, false);
         };
         img.src = e.target.result;
       };

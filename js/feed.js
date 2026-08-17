@@ -5,9 +5,36 @@
 const FeedModule = {
   currentPhotoModalUrl: null,
   capturedSocialPhotoBase64: null,
+  commentDrafts: {},
 
   init() {
     this.setupSocialPostModal();
+  },
+
+  handleCommentInput(itemId, text) {
+    this.commentDrafts[itemId] = text;
+  },
+
+  setCapturedPhoto(base64, isVideo = false) {
+    this.capturedSocialPhotoBase64 = base64;
+    const previewImg = document.getElementById("socialPhotoPreview");
+    const previewVid = document.getElementById("socialVideoPreview");
+    const removeBtn = document.getElementById("btnRemoveSocialPhoto");
+
+    if (isVideo) {
+      if (previewImg) previewImg.classList.add("hidden");
+      if (previewVid) {
+        previewVid.src = base64;
+        previewVid.classList.remove("hidden");
+      }
+    } else {
+      if (previewVid) previewVid.classList.add("hidden");
+      if (previewImg) {
+        previewImg.src = base64;
+        previewImg.classList.remove("hidden");
+      }
+    }
+    if (removeBtn) removeBtn.classList.remove("hidden");
   },
 
   setupSocialPostModal() {
@@ -311,6 +338,26 @@ const FeedModule = {
     const container = document.getElementById("feedPostsContainer");
     if (!container) return;
 
+    // Aktuelle Entwürfe aus allen vorhandenen Eingabefeldern sichern
+    document.querySelectorAll(".comment-input").forEach(inp => {
+      if (inp.id && inp.id.startsWith("input_comment_")) {
+        const itemId = inp.id.replace("input_comment_", "");
+        this.commentDrafts[itemId] = inp.value;
+      }
+    });
+
+    // Aktiven Fokus und Cursorposition erfassen
+    const activeEl = document.activeElement;
+    const activeId = activeEl ? activeEl.id : null;
+    let selStart = null;
+    let selEnd = null;
+    if (activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA")) {
+      try {
+        selStart = activeEl.selectionStart;
+        selEnd = activeEl.selectionEnd;
+      } catch (e) {}
+    }
+
     const feed = window.store.state.feed || [];
     const currentUser = window.store.state.currentUser;
     const myId = currentUser ? currentUser.id : null;
@@ -351,8 +398,9 @@ const FeedModule = {
         votingHtml = this.renderVotingCard(item, myId);
       }
 
-      // Kommentare HTML
+      // Kommentare HTML & Gespeicherter Draft
       const comments = item.comments || [];
+      const draftText = this.commentDrafts[item.id] || "";
       const commentsHtml = `
         <div class="comments-section" id="comments_${item.id}">
           <div class="comments-list">
@@ -370,7 +418,7 @@ const FeedModule = {
 
           <div class="comment-input-row">
             <img src="${(currentUser && currentUser.avatar) || ProfileModule.generateDefaultAvatar(currentUser ? currentUser.name : 'X')}" class="mini-input-avatar" />
-            <input type="text" id="input_comment_${item.id}" placeholder="Schreib einen Kommentar..." class="comment-input" onkeydown="if(event.key==='Enter') FeedModule.submitComment('${item.id}')" />
+            <input type="text" id="input_comment_${item.id}" value="${this.escapeHtml(draftText)}" placeholder="Schreib einen Kommentar..." class="comment-input" oninput="FeedModule.handleCommentInput('${item.id}', this.value)" onkeydown="if(event.key==='Enter') FeedModule.submitComment('${item.id}')" />
             <button class="btn-send-comment" onclick="FeedModule.submitComment('${item.id}')">💬 Senden</button>
           </div>
         </div>
@@ -445,6 +493,19 @@ const FeedModule = {
         </div>
       `;
     }).join("");
+
+    // Aktiven Fokus & Cursorposition nach dem Rendern nahtlos wiederherstellen
+    if (activeId) {
+      const elToFocus = document.getElementById(activeId);
+      if (elToFocus) {
+        elToFocus.focus();
+        if (selStart !== null && selEnd !== null) {
+          try {
+            elToFocus.setSelectionRange(selStart, selEnd);
+          } catch (e) {}
+        }
+      }
+    }
   },
 
   renderVotingCard(item, myId) {
@@ -528,6 +589,7 @@ const FeedModule = {
 
     if (window.GameAudio) window.GameAudio.playClick();
     await window.store.addComment(feedItemId, currentUser.id, text);
+    delete this.commentDrafts[feedItemId];
     input.value = "";
     this.renderFeed();
   },

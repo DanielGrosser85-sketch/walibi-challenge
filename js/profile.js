@@ -218,19 +218,20 @@ const ProfileModule = {
   },
 
   // --- ⚡ DISPLAY-WACHHALTEN (SCREEN WAKE LOCK API) ---
-  async toggleWakeLock() {
-    if (window.GameAudio) window.GameAudio.playClick();
+  async toggleWakeLock(silent = false) {
+    if (!silent && window.GameAudio) window.GameAudio.playClick();
     const btn = document.getElementById("btnToggleWakeLock");
 
     if ('wakeLock' in navigator) {
       try {
         if (!this.wakeLockSentinel) {
           this.wakeLockSentinel = await navigator.wakeLock.request('screen');
+          localStorage.setItem("walibi_wakelock_preferred", "true");
           if (btn) {
             btn.style.background = "rgba(255, 204, 0, 0.35)";
             btn.style.borderColor = "var(--walibi-yellow)";
           }
-          if (window.app && window.app.showToast) {
+          if (!silent && window.app && window.app.showToast) {
             window.app.showToast("⚡ Display bleibt jetzt dauerhaft AKTIV (Handy sperrt nicht)!");
           }
           this.wakeLockSentinel.addEventListener('release', () => {
@@ -241,25 +242,37 @@ const ProfileModule = {
             }
           });
         } else {
+          localStorage.setItem("walibi_wakelock_preferred", "false");
           await this.wakeLockSentinel.release();
           this.wakeLockSentinel = null;
           if (btn) {
             btn.style.background = "";
             btn.style.borderColor = "";
           }
-          if (window.app && window.app.showToast) {
+          if (!silent && window.app && window.app.showToast) {
             window.app.showToast("⚡ Display-Wachhalter DEAKTIVIERT (Normaler Standby).");
           }
         }
       } catch (err) {
-        if (window.app && window.app.showToast) {
+        if (!silent && window.app && window.app.showToast) {
           window.app.showToast("⚡ Display-Wachhalter aktiv!");
         }
       }
     } else {
-      if (window.app && window.app.showToast) {
+      if (!silent && window.app && window.app.showToast) {
         window.app.showToast("💡 Tipp: Füge die App 'Zum Startbildschirm hinzu' für echte App-Funktion!");
       }
+    }
+  },
+
+  async requestWakeLockSilent() {
+    if ('wakeLock' in navigator && !this.wakeLockSentinel) {
+      try {
+        this.wakeLockSentinel = await navigator.wakeLock.request('screen');
+        this.wakeLockSentinel.addEventListener('release', () => {
+          this.wakeLockSentinel = null;
+        });
+      } catch (e) {}
     }
   },
 
@@ -272,6 +285,9 @@ const ProfileModule = {
     const isFullscreen = doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement;
 
     if (!isFullscreen) {
+      localStorage.setItem("walibi_fullscreen_preferred", "true");
+      this.requestWakeLockSilent();
+
       if (docEl.requestFullscreen) {
         docEl.requestFullscreen().catch(err => {
           console.warn("Fullscreen nicht erlaubt", err);
@@ -288,6 +304,7 @@ const ProfileModule = {
         window.app.showToast("⛶ Vollbild-Modus aktiviert!");
       }
     } else {
+      localStorage.setItem("walibi_fullscreen_preferred", "false");
       if (doc.exitFullscreen) {
         doc.exitFullscreen().catch(() => {});
       } else if (doc.webkitExitFullscreen) {
@@ -300,6 +317,31 @@ const ProfileModule = {
       if (window.app && window.app.showToast) {
         window.app.showToast("⛶ Vollbild beendet.");
       }
+    }
+  },
+
+  openSelfieCamera(isEditing = true) {
+    if (window.CameraModule) {
+      window.CameraModule.open({
+        title: "🤳 Eigenes Selfie aufnehmen",
+        facingMode: "user",
+        onCapture: (b64) => {
+          if (isEditing) {
+            this.setQuickAvatar(b64);
+          } else {
+            this.setNewPlayerAvatar(b64);
+          }
+        }
+      });
+    }
+  },
+
+  setNewPlayerAvatar(b64) {
+    this.capturedNewAvatarBase64 = b64;
+    const prev = document.getElementById("newPlayerAvatarPreview");
+    if (prev) {
+      prev.src = b64;
+      prev.classList.remove("hidden");
     }
   },
 

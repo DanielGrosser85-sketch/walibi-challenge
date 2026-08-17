@@ -12,6 +12,8 @@ class MainApp {
   init() {
     this.setupTabNavigation();
     this.setupPhotoViewerModal();
+    this.setupNavigationHistory();
+    this.setupStandbyAndFullscreenRestoration();
     this.startMascotQuoteRotation();
     this.setSpeakerQuote("hard_gaan", "Freikörper-Fred", "🩱", '"TOO HOT TO HANDLE! Wer Kleidung trägt, hat Angst vor Fahrtwind!"');
 
@@ -22,6 +24,7 @@ class MainApp {
     if (window.LeaderboardModule) window.LeaderboardModule.init();
     if (window.ParkGuideModule) window.ParkGuideModule.init();
     if (window.AwardsModule) window.AwardsModule.init();
+    if (window.CameraModule) window.CameraModule.init();
 
     if (window.store) {
       window.store.subscribe(() => {
@@ -30,6 +33,148 @@ class MainApp {
     }
 
     console.log("🎢 Mr. oder Mrs. Walibi Challenge App erfolgreich gestartet!");
+  }
+
+  // --- 🛡️ SMART NAVIGATION & ANDROID HARDWARE BACK-BUTTON TRAPPING ---
+  setupNavigationHistory() {
+    this.lastBackPressTime = 0;
+    this.modalStack = [];
+
+    // Basis-State setzen
+    try {
+      history.replaceState({ tab: this.currentTab, isRoot: true }, "");
+    } catch(e) {}
+
+    window.addEventListener("popstate", (e) => {
+      this.handlePopState(e);
+    });
+  }
+
+  handlePopState(e) {
+    // 1. Prüfen, ob irgendein Modal geöffnet ist
+    const openModals = Array.from(document.querySelectorAll(".modal-overlay:not(.hidden)"));
+    
+    if (openModals.length > 0) {
+      // Höchstes / oberstes Modal schließen
+      const topModal = openModals[openModals.length - 1];
+      const modalId = topModal.id;
+
+      if (modalId === "inAppCameraModal" && window.CameraModule) {
+        window.CameraModule.close();
+      } else if (modalId === "questDetailModal" && window.QuestsModule) {
+        window.QuestsModule.closeModal();
+      } else if (modalId === "myProfileModal" && window.ProfileModule) {
+        window.ProfileModule.closeMyProfileModal();
+      } else if (modalId === "gameEndedCelebrationModal" && window.AwardsModule) {
+        window.AwardsModule.closeCelebrationModal();
+      } else if (modalId === "accessCodeModal") {
+        // Startmaske bleibt geöffnet
+        try { history.pushState({ modalId: "accessCodeModal" }, ""); } catch(err) {}
+        return;
+      } else {
+        topModal.classList.add("hidden");
+      }
+
+      if (window.GameAudio) window.GameAudio.playClick();
+
+      // History-State wiederherstellen, damit man in der App bleibt
+      try {
+        history.pushState({ tab: this.currentTab }, "");
+      } catch (err) {}
+      return;
+    }
+
+    // 2. Kein Modal offen -> Prüfen, ob wir in einem Untertab sind
+    if (this.currentTab !== "feed") {
+      this.switchTab("feed", false);
+      try {
+        history.pushState({ tab: "feed" }, "");
+      } catch(err) {}
+      return;
+    }
+
+    // 3. Im Haupt-Feed: Verhindern des versehentlichen Verlassens via Doppel-Klick Schutz
+    const now = Date.now();
+    if (now - this.lastBackPressTime < 2400) {
+      // Zweiter Klick innerhalb von 2,4 Sekunden -> Standard Browser-Verlassen erlauben
+      return;
+    } else {
+      this.lastBackPressTime = now;
+      this.showToast("👆 Tippe noch einmal auf Zurück, um die App zu verlassen.");
+      try {
+        history.pushState({ tab: "feed", isRoot: true }, "");
+      } catch (err) {}
+    }
+  }
+
+  // --- 📱 VOLLBILD- & STANDBY-REAKTIVIERUNG ---
+  setupStandbyAndFullscreenRestoration() {
+    const checkAndRestore = () => {
+      if (document.visibilityState === "visible") {
+        // 1. Silent WakeLock reaktivieren falls vom Nutzer gewünscht
+        if (localStorage.getItem("walibi_wakelock_preferred") === "true" && window.ProfileModule) {
+          window.ProfileModule.requestWakeLockSilent();
+        }
+
+        // 2. Vollbildmodus prüfen
+        const isCurrentlyFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+        const preferredFullscreen = localStorage.getItem("walibi_fullscreen_preferred") === "true";
+
+        if (preferredFullscreen && !isCurrentlyFullscreen) {
+          this.showFullscreenRestorePrompt();
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", checkAndRestore);
+    window.addEventListener("focus", checkAndRestore);
+  }
+
+  showFullscreenRestorePrompt() {
+    let chip = document.getElementById("floatingFullscreenChip");
+    if (!chip) {
+      chip = document.createElement("div");
+      chip.id = "floatingFullscreenChip";
+      chip.className = "floating-fullscreen-chip";
+      chip.innerHTML = `<span>⛶</span> Vollbild wiederherstellen (Tippen)`;
+      chip.onclick = () => this.reenterFullscreen();
+      document.body.appendChild(chip);
+    }
+    chip.classList.remove("hidden");
+
+    // Auch bei erster Touch-Geste auf den gesamten Screen automatisch Vollbild reaktivieren
+    const oneTouchReenter = () => {
+      this.reenterFullscreen();
+      window.removeEventListener("touchstart", oneTouchReenter);
+      window.removeEventListener("click", oneTouchReenter);
+    };
+    window.addEventListener("touchstart", oneTouchReenter, { once: true, passive: true });
+    window.addEventListener("click", oneTouchReenter, { once: true, passive: true });
+  }
+
+  reenterFullscreen() {
+    const doc = document;
+    const docEl = document.documentElement;
+    const isFullscreen = doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement;
+
+    if (!isFullscreen) {
+      if (docEl.requestFullscreen) {
+        docEl.requestFullscreen().catch(() => {});
+      } else if (docEl.webkitRequestFullscreen) {
+        docEl.webkitRequestFullscreen();
+      } else if (docEl.mozRequestFullScreen) {
+        docEl.mozRequestFullScreen();
+      } else if (docEl.msRequestFullscreen) {
+        docEl.msRequestFullscreen();
+      }
+    }
+
+    const chip = document.getElementById("floatingFullscreenChip");
+    if (chip) chip.classList.add("hidden");
+
+    if (window.ProfileModule) {
+      window.ProfileModule.requestWakeLockSilent();
+    }
   }
 
   setupTabNavigation() {
@@ -43,8 +188,14 @@ class MainApp {
     });
   }
 
-  switchTab(tabName) {
+  switchTab(tabName, pushState = true) {
     this.currentTab = tabName;
+
+    if (pushState) {
+      try {
+        history.pushState({ tab: tabName }, "");
+      } catch (e) {}
+    }
 
     const navButtons = document.querySelectorAll(".bottom-nav-btn");
     navButtons.forEach(btn => {
