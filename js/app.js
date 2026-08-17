@@ -467,8 +467,8 @@ class MainApp {
     const modal = document.getElementById("quickMenuModal");
     if (!modal) return;
     
-    // Admin Buttons im Quick Menu nur für Admin (grossek) anzeigen
-    const isGrossekAdmin = window.ProfileModule && (window.ProfileModule.isAdminUser() || (window.store && window.store.state.currentUser && window.store.state.currentUser.name && window.store.state.currentUser.name.toLowerCase() === "grossek"));
+    // Admin Buttons im Quick Menu nur für Admin (grossek mit PIN 1008) anzeigen
+    const isGrossekAdmin = window.ProfileModule && typeof window.ProfileModule.isAdminUser === "function" && window.ProfileModule.isAdminUser();
     const adminBtn = document.getElementById("menuAdminBtn");
     const hhBtn = document.getElementById("menuHappyHourBtn");
     if (adminBtn) adminBtn.style.display = isGrossekAdmin ? "flex" : "none";

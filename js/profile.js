@@ -184,11 +184,16 @@ const ProfileModule = {
 
   isAdminUser() {
     const savedCode = localStorage.getItem("walibi_access_code");
-    return savedCode === "1008" || this.isAdmin === true;
+    if (savedCode !== "1008") return false;
+    const user = window.store && window.store.state ? window.store.state.currentUser : null;
+    if (!user || !user.name) return false;
+    return user.name.toLowerCase() === "grossek";
   },
 
   activateAdminMode() {
+    localStorage.setItem("walibi_access_code", "1008");
     this.isAdmin = true;
+    this.ensureAdminUser();
     this.updateHeaderProfile();
   },
 
@@ -1141,6 +1146,16 @@ const ProfileModule = {
     if (!player) return;
 
     if (window.GameAudio) window.GameAudio.playClick();
+
+    // Wenn der gewählte Spieler nicht Grossek ist -> Admin-Rechte strikt entziehen
+    if (player.name.toLowerCase() !== "grossek") {
+      this.isAdmin = false;
+      localStorage.setItem("walibi_access_code", "6969");
+    } else {
+      const code = localStorage.getItem("walibi_access_code");
+      if (code === "1008") this.isAdmin = true;
+    }
+
     window.store.setCurrentUser(player);
     localStorage.setItem("walibi_active_user_id", player.id);
     localStorage.setItem("walibi_current_user_id", player.id);
@@ -1330,7 +1345,7 @@ const ProfileModule = {
     const adminBtn = document.getElementById("btnAdminPanel");
     const menuAdminBtn = document.getElementById("menuAdminBtn");
     const menuHhBtn = document.getElementById("menuHappyHourBtn");
-    const isGrossekAdmin = this.isAdminUser() || (user && user.name && user.name.toLowerCase() === "grossek");
+    const isGrossekAdmin = this.isAdminUser();
     const myProfileAdminBtn = document.getElementById("myProfileAdminBtn");
 
     // KRONE IM HEADER NUR FÜR ADMIN (GROSSEK) ANZEIGEN
