@@ -37,6 +37,8 @@ function getDefaultState() {
     happyHour: { active: false, endsAt: null, multiplier: 2 },
     sympathyVotes: {},
     gameStatus: { isRunning: true, isEnded: false, startedAt: new Date().toISOString() },
+    deletedPlayerIds: [],
+    lastResetTimestamp: null,
     version: 1
   };
 }
@@ -58,6 +60,8 @@ let db = getDefaultState();
 if (fs.existsSync(DB_FILE)) {
   try {
     db = JSON.parse(fs.readFileSync(DB_FILE, 'utf-8'));
+    if (!Array.isArray(db.deletedPlayerIds)) db.deletedPlayerIds = [];
+    if (db.lastResetTimestamp === undefined) db.lastResetTimestamp = null;
   } catch (e) {
     console.error("Fehler beim Laden von db.json, nutze Standardwerte", e);
   }
@@ -1016,6 +1020,87 @@ function handleApiRequest(pathname, req, res) {
     return;
   }
 
+  // POST /api/sync/restore (Wiederherstellung & Auto-Healing nach Server-Neustart)
+  if (pathname === '/api/sync/restore' && req.method === 'POST') {
+    parseJsonBody(req, (err, data) => {
+      if (err || !data) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Ungültige Restore-Daten' }));
+        return;
+      }
+
+      if (!Array.isArray(db.deletedPlayerIds)) db.deletedPlayerIds = [];
+      let updated = false;
+
+      // 1. Spieler zusammenführen
+      if (Array.isArray(data.players)) {
+        data.players.forEach(incoming => {
+          if (!incoming || !incoming.id) return;
+          // Gelöschte Spieler ignorieren
+          if (db.deletedPlayerIds.includes(incoming.id)) return;
+
+          const existingIdx = db.players.findIndex(p => p.id === incoming.id);
+          if (existingIdx >= 0) {
+            const existing = db.players[existingIdx];
+            // Merge Werte (höhere Punkte, Quests vereinigen, etc.)
+            existing.points = Math.max(Number(existing.points) || 0, Number(incoming.points) || 0);
+            existing.drinksCount = Math.max(Number(existing.drinksCount) || 0, Number(incoming.drinksCount) || 0);
+            existing.gutGlaubenCount = Math.max(Number(existing.gutGlaubenCount) || 0, Number(incoming.gutGlaubenCount) || 0);
+            existing.sympathyPoints = Math.max(Number(existing.sympathyPoints) || 0, Number(incoming.sympathyPoints) || 0);
+            if (incoming.name) existing.name = incoming.name;
+            if (incoming.avatar) existing.avatar = incoming.avatar;
+            if (incoming.house) existing.house = incoming.house;
+
+            if (Array.isArray(incoming.completedQuests)) {
+              existing.completedQuests = Array.from(new Set([...(existing.completedQuests || []), ...incoming.completedQuests]));
+            }
+            if (Array.isArray(incoming.completedSideQuests)) {
+              existing.completedSideQuests = Array.from(new Set([...(existing.completedSideQuests || []), ...incoming.completedSideQuests]));
+            }
+            if (incoming.rideCounts && typeof incoming.rideCounts === 'object') {
+              if (!existing.rideCounts) existing.rideCounts = {};
+              Object.keys(incoming.rideCounts).forEach(attrId => {
+                existing.rideCounts[attrId] = Math.max(Number(existing.rideCounts[attrId]) || 0, Number(incoming.rideCounts[attrId]) || 0);
+              });
+            }
+            if (incoming.drinksDetail && typeof incoming.drinksDetail === 'object') {
+              if (!existing.drinksDetail) existing.drinksDetail = { beer: 0, shot: 0, longdrink: 0, joint: 0, water: 0 };
+              Object.keys(incoming.drinksDetail).forEach(itemId => {
+                existing.drinksDetail[itemId] = Math.max(Number(existing.drinksDetail[itemId]) || 0, Number(incoming.drinksDetail[itemId]) || 0);
+              });
+            }
+          } else {
+            // Neuer / wiederherzustellender Spieler
+            db.players.push(incoming);
+            updated = true;
+          }
+        });
+      }
+
+      // 2. Feed-Einträge zusammenführen
+      if (Array.isArray(data.feed)) {
+        data.feed.forEach(incomingItem => {
+          if (!incomingItem || !incomingItem.id) return;
+          if (db.deletedPlayerIds.includes(incomingItem.userId)) return;
+          if (db.lastResetTimestamp && incomingItem.timestamp && new Date(incomingItem.timestamp) < new Date(db.lastResetTimestamp)) return;
+
+          const exists = db.feed.some(f => f.id === incomingItem.id);
+          if (!exists) {
+            db.feed.push(incomingItem);
+            updated = true;
+          }
+        });
+        // Neueste Beiträge oben sortieren
+        db.feed.sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+      }
+
+      saveDb();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, state: db }));
+    });
+    return;
+  }
+
   // POST /api/admin/reset-game (Kompletter Reset auf 0 & nur Grossek behalten)
   if (pathname === '/api/admin/reset-game' && req.method === 'POST') {
     parseJsonBody(req, (err, data) => {
@@ -1024,6 +1109,10 @@ function handleApiRequest(pathname, req, res) {
         res.end(JSON.stringify({ error: 'Admin-Zugang verweigert' }));
         return;
       }
+
+      const resetTime = new Date().toISOString();
+      db.lastResetTimestamp = resetTime;
+      db.deletedPlayerIds = [];
 
       // Nur Grossek behalten mit 0 Punkten
       const grossekExisting = db.players.find(p => p.name.toLowerCase() === 'grossek');
@@ -1049,10 +1138,10 @@ function handleApiRequest(pathname, req, res) {
       db.feed = [];
       db.sympathyVotes = {};
       db.happyHour = { active: false, endsAt: null, multiplier: 2 };
-      db.gameStatus = { isRunning: true, isEnded: false, startedAt: new Date().toISOString() };
+      db.gameStatus = { isRunning: true, isEnded: false, startedAt: resetTime };
       saveDb();
 
-      broadcastSSE({ type: "SYNC_STATE", state: db });
+      broadcastSSE({ type: "ADMIN_RESET", lastResetTimestamp: resetTime, state: db });
 
       console.log("🚨 ADMIN RESET DURCHGEFÜHRT: Nur Grossek behalten, alle Punkte auf 0, Feed geleert!");
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -1061,7 +1150,7 @@ function handleApiRequest(pathname, req, res) {
     return;
   }
 
-  // POST /api/admin/delete-player (Einzelnen Spieler löschen)
+  // POST /api/admin/delete-player (Einzelnen Spieler löschen - NUR ADMIN GROSSEK)
   if (pathname === '/api/admin/delete-player' && req.method === 'POST') {
     parseJsonBody(req, (err, data) => {
       if (err || data.code !== '1008' || !data.playerId) {
@@ -1083,6 +1172,11 @@ function handleApiRequest(pathname, req, res) {
         return;
       }
 
+      if (!Array.isArray(db.deletedPlayerIds)) db.deletedPlayerIds = [];
+      if (!db.deletedPlayerIds.includes(data.playerId)) {
+        db.deletedPlayerIds.push(data.playerId);
+      }
+
       // Spieler aus db.players entfernen
       db.players = db.players.filter(p => p.id !== data.playerId);
 
@@ -1098,14 +1192,15 @@ function handleApiRequest(pathname, req, res) {
       });
 
       saveDb();
+      broadcastSSE({ type: "PLAYER_DELETED", playerId: data.playerId, deletedPlayerIds: db.deletedPlayerIds, state: db });
       console.log(`🗑️ ADMIN: Spieler "${targetPlayer.name}" (${data.playerId}) gelöscht!`);
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: true, message: `Spieler ${targetPlayer.name} gelöscht`, players: db.players }));
+      res.end(JSON.stringify({ success: true, message: `Spieler ${targetPlayer.name} gelöscht`, players: db.players, deletedPlayerIds: db.deletedPlayerIds }));
     });
     return;
   }
 
-  // POST /api/admin/delete-all-players (Alle Spieler außer Grossek löschen)
+  // POST /api/admin/delete-all-players (Alle Spieler außer Grossek löschen - NUR ADMIN GROSSEK)
   if (pathname === '/api/admin/delete-all-players' && req.method === 'POST') {
     parseJsonBody(req, (err, data) => {
       if (err || data.code !== '1008') {
@@ -1113,6 +1208,13 @@ function handleApiRequest(pathname, req, res) {
         res.end(JSON.stringify({ error: 'Admin-Zugang verweigert' }));
         return;
       }
+
+      if (!Array.isArray(db.deletedPlayerIds)) db.deletedPlayerIds = [];
+      db.players.forEach(p => {
+        if (p.name.toLowerCase() !== 'grossek' && !db.deletedPlayerIds.includes(p.id)) {
+          db.deletedPlayerIds.push(p.id);
+        }
+      });
 
       let grossek = db.players.find(p => p.name.toLowerCase() === 'grossek');
       if (!grossek) {
@@ -1131,19 +1233,28 @@ function handleApiRequest(pathname, req, res) {
       db.feed = [];
       saveDb();
 
+      broadcastSSE({ type: "ALL_PLAYERS_DELETED", deletedPlayerIds: db.deletedPlayerIds, state: db });
       console.log("🗑️ ADMIN: Alle Spieler außer Grossek gelöscht!");
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: true, message: 'Alle Spieler außer Grossek wurden gelöscht', players: db.players }));
+      res.end(JSON.stringify({ success: true, message: 'Alle Spieler außer Grossek wurden gelöscht', players: db.players, deletedPlayerIds: db.deletedPlayerIds }));
     });
     return;
   }
 
-  // POST /api/reset
+  // POST /api/reset (NUR MIT ADMIN PIN 1008 ERLAUBT)
   if (pathname === '/api/reset' && req.method === 'POST') {
-    db = getDefaultState();
-    saveDb();
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ success: true }));
+    parseJsonBody(req, (err, data) => {
+      if (err || data.code !== '1008') {
+        res.writeHead(403, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Nur Admin grossek darf das Spiel zurücksetzen' }));
+        return;
+      }
+      db = getDefaultState();
+      db.lastResetTimestamp = new Date().toISOString();
+      saveDb();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, state: db }));
+    });
     return;
   }
 

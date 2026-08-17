@@ -5,8 +5,11 @@
 class AppStore {
   constructor() {
     this.STORAGE_KEY = "walibi_challenge_app_v1";
+    this.BACKUP_KEY = "walibi_persistent_backup_v1";
+    this.RESET_KEY = "walibi_last_admin_reset";
     this.USER_KEY = "walibi_active_user_id";
     this.listeners = [];
+    this.isRestoringToServer = false;
     this.state = this.loadLocalState();
     this.apiAvailable = false;
     this.initCloudSync();
@@ -42,6 +45,8 @@ class AppStore {
       happyHour: { active: false, endsAt: null, multiplier: 2 },
       sympathyVotes: {},
       gameStatus: { isRunning: true, isEnded: false, startedAt: new Date().toISOString() },
+      deletedPlayerIds: [],
+      lastResetTimestamp: null,
       rulesAccepted: false,
       quests: window.DEFAULT_QUESTS || [],
       counterItems: window.COUNTER_ITEMS || []
@@ -84,17 +89,27 @@ class AppStore {
 
   loadLocalState() {
     try {
-      const data = localStorage.getItem(this.STORAGE_KEY);
+      let data = localStorage.getItem(this.STORAGE_KEY);
+      if (!data) {
+        // Redundantes Backup laden, falls Hauptspeicher geleert wurde
+        data = localStorage.getItem(this.BACKUP_KEY);
+      }
       const savedUserId = localStorage.getItem(this.USER_KEY) || localStorage.getItem("walibi_active_user_id");
+      const savedReset = localStorage.getItem(this.RESET_KEY);
 
       if (data) {
         const parsed = JSON.parse(data);
         if (parsed && typeof parsed === "object") {
           parsed.quests = window.DEFAULT_QUESTS || [];
           parsed.counterItems = window.COUNTER_ITEMS || [];
-          if (!Array.isArray(parsed.players)) parsed.players = this.getDefaultState().players;
+          if (!Array.isArray(parsed.players) || parsed.players.length === 0) {
+            parsed.players = this.getDefaultState().players;
+          }
           if (!Array.isArray(parsed.houses)) parsed.houses = ["Haus 1", "Haus 2", "Haus 3"];
           if (!parsed.sympathyVotes || typeof parsed.sympathyVotes !== "object") parsed.sympathyVotes = {};
+          if (!Array.isArray(parsed.deletedPlayerIds)) parsed.deletedPlayerIds = [];
+          if (savedReset && !parsed.lastResetTimestamp) parsed.lastResetTimestamp = savedReset;
+
           if (!Array.isArray(parsed.feed)) {
             parsed.feed = [];
           } else {
@@ -142,6 +157,9 @@ class AppStore {
       if (this.state.currentUser && this.state.currentUser.id) {
         localStorage.setItem(this.USER_KEY, this.state.currentUser.id);
       }
+      if (this.state.lastResetTimestamp) {
+        localStorage.setItem(this.RESET_KEY, this.state.lastResetTimestamp);
+      }
 
       // Sicheres Klonen für localStorage: Große Base64-Strings im Feed niemals im 5MB localStorage speichern
       const safeState = { ...this.state };
@@ -154,7 +172,9 @@ class AppStore {
         });
       }
 
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(safeState));
+      const serialized = JSON.stringify(safeState);
+      localStorage.setItem(this.STORAGE_KEY, serialized);
+      localStorage.setItem(this.BACKUP_KEY, serialized);
       this.notifyListeners();
     } catch (e) {
       console.warn("Fehler beim Speichern in localStorage", e);
@@ -198,7 +218,9 @@ class AppStore {
       const gameStatus = db.gameStatus || "running";
       const hhPart = JSON.stringify(db.happyHour || {});
       const sympathyPart = JSON.stringify(db.sympathyVotes || {});
-      return `${playersPart}###${feedPart}###${gameStatus}###${hhPart}###${sympathyPart}`;
+      const delPart = (db.deletedPlayerIds || []).join(",");
+      const resetPart = db.lastResetTimestamp || "";
+      return `${playersPart}###${feedPart}###${gameStatus}###${hhPart}###${sympathyPart}###${delPart}###${resetPart}`;
     } catch(e) {
       return JSON.stringify(db);
     }
@@ -227,6 +249,37 @@ class AppStore {
           const data = JSON.parse(event.data);
           if (data.type === "INIT" || data.type === "SYNC_STATE") {
             this.mergeServerState(data.state);
+          } else if (data.type === "ADMIN_RESET") {
+            this.state.lastResetTimestamp = data.lastResetTimestamp;
+            if (data.state) {
+              this.state.players = data.state.players || [];
+              this.state.feed = data.state.feed || [];
+              this.state.sympathyVotes = data.state.sympathyVotes || {};
+              this.state.happyHour = data.state.happyHour || { active: false, endsAt: null, multiplier: 2 };
+              this.state.gameStatus = data.state.gameStatus || { isRunning: true, isEnded: false };
+              this.state.deletedPlayerIds = [];
+            }
+            this.saveLocalState();
+            if (window.app) window.app.renderAllViews();
+            if (window.app && window.app.showToast) {
+              window.app.showToast("🚨 Admin <strong>grossek</strong> hat das Spiel auf Null zurückgesetzt.");
+            }
+          } else if (data.type === "PLAYER_DELETED") {
+            const delId = data.playerId;
+            if (!this.state.deletedPlayerIds) this.state.deletedPlayerIds = [];
+            if (!this.state.deletedPlayerIds.includes(delId)) this.state.deletedPlayerIds.push(delId);
+            this.state.players = this.state.players.filter(p => p.id !== delId);
+            this.state.feed = this.state.feed.filter(f => f.userId !== delId);
+            this.saveLocalState();
+            if (window.app) window.app.renderAllViews();
+          } else if (data.type === "ALL_PLAYERS_DELETED") {
+            let grossek = this.state.players.find(p => p.name.toLowerCase() === "grossek");
+            if (!grossek) grossek = this.getDefaultState().players[0];
+            this.state.players = [grossek];
+            this.state.feed = [];
+            if (Array.isArray(data.deletedPlayerIds)) this.state.deletedPlayerIds = data.deletedPlayerIds;
+            this.saveLocalState();
+            if (window.app) window.app.renderAllViews();
           } else if (data.type === "HAPPY_HOUR_UPDATE") {
             if (data.happyHour) this.state.happyHour = data.happyHour;
             if (data.state) this.mergeServerState(data.state);
@@ -270,24 +323,144 @@ class AppStore {
     } catch (e) {}
   }
 
+  // --- AUTOMATISCHES AUTO-HEALING: WIEDERHERSTELLUNG AUF DEM SERVER BEI RESTART ---
+  async syncRestoreToServer(playersToRestore, feedToRestore) {
+    if (this.isRestoringToServer) return;
+    this.isRestoringToServer = true;
+    try {
+      await fetch("/api/sync/restore", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          players: playersToRestore,
+          feed: feedToRestore
+        })
+      });
+    } catch (e) {
+      console.warn("Auto-Healing Sync fehlgeschlagen:", e);
+    } finally {
+      this.isRestoringToServer = false;
+    }
+  }
+
   mergeServerState(serverDb) {
     if (!serverDb) return;
 
     const newFingerprint = this.getStateFingerprint(serverDb);
     if (newFingerprint && newFingerprint === this.lastServerFingerprint) {
-      // Keine relevanten Änderungen vorhanden -> Re-Render überspringen, damit keine Eingabefelder springen
       return;
     }
     this.lastServerFingerprint = newFingerprint;
 
-    if (Array.isArray(serverDb.players)) {
-      this.state.players = serverDb.players;
+    // 1. Prüfen auf echten Admin-Reset durch grossek
+    const serverResetTime = serverDb.lastResetTimestamp ? new Date(serverDb.lastResetTimestamp).getTime() : 0;
+    const localResetTime = this.state.lastResetTimestamp ? new Date(this.state.lastResetTimestamp).getTime() : 0;
+
+    if (serverResetTime > 0 && serverResetTime > localResetTime) {
+      // Neuerer Admin-Reset vom Server -> Lokalen State auf Server-Reset-Stand bringen
+      this.state.lastResetTimestamp = serverDb.lastResetTimestamp;
+      this.state.deletedPlayerIds = Array.isArray(serverDb.deletedPlayerIds) ? serverDb.deletedPlayerIds : [];
+      this.state.players = Array.isArray(serverDb.players) ? serverDb.players : this.getDefaultState().players;
+      this.state.feed = Array.isArray(serverDb.feed) ? serverDb.feed : [];
+      this.state.sympathyVotes = serverDb.sympathyVotes || {};
+      this.state.happyHour = serverDb.happyHour || { active: false, endsAt: null, multiplier: 2 };
+      this.state.gameStatus = serverDb.gameStatus || { isRunning: true, isEnded: false };
+      this.saveLocalState();
+      if (window.app) window.app.renderAllViews();
+      if (window.ProfileModule) window.ProfileModule.updateHeaderProfile();
+      return;
     }
+
+    // 2. Tombstones (vom Admin grossek gelöschte Spieler) anwenden
+    const deletedIds = Array.isArray(serverDb.deletedPlayerIds) ? serverDb.deletedPlayerIds : (this.state.deletedPlayerIds || []);
+    this.state.deletedPlayerIds = deletedIds;
+
+    // 3. Intelligenter 2-Wege Merge für Spieler (Schutz vor Datenverlust bei Server-Schlaf / Neustart)
+    const playerMap = new Map();
+
+    // Zuerst lokale Spieler einfügen (falls nicht vom Admin gelöscht)
+    (this.state.players || []).forEach(p => {
+      if (p && p.id && !deletedIds.includes(p.id)) {
+        playerMap.set(p.id, { ...p });
+      }
+    });
+
+    // Server-Spieler einarbeiten
+    const serverPlayers = Array.isArray(serverDb.players) ? serverDb.players : [];
+    serverPlayers.forEach(sp => {
+      if (!sp || !sp.id || deletedIds.includes(sp.id)) return;
+
+      if (playerMap.has(sp.id)) {
+        const localP = playerMap.get(sp.id);
+        const merged = {
+          ...localP,
+          ...sp,
+          name: sp.name || localP.name,
+          avatar: sp.avatar || localP.avatar,
+          house: sp.house || localP.house,
+          points: Math.max(Number(localP.points) || 0, Number(sp.points) || 0),
+          drinksCount: Math.max(Number(localP.drinksCount) || 0, Number(sp.drinksCount) || 0),
+          gutGlaubenCount: Math.max(Number(localP.gutGlaubenCount) || 0, Number(sp.gutGlaubenCount) || 0),
+          sympathyPoints: Math.max(Number(localP.sympathyPoints) || 0, Number(sp.sympathyPoints) || 0),
+          completedQuests: Array.from(new Set([...(localP.completedQuests || []), ...(sp.completedQuests || [])])),
+          completedSideQuests: Array.from(new Set([...(localP.completedSideQuests || []), ...(sp.completedSideQuests || [])]))
+        };
+
+        // Achterbahn-Fahrten mergen
+        merged.rideCounts = { ...(localP.rideCounts || {}) };
+        if (sp.rideCounts && typeof sp.rideCounts === 'object') {
+          Object.keys(sp.rideCounts).forEach(attrId => {
+            merged.rideCounts[attrId] = Math.max(Number(merged.rideCounts[attrId]) || 0, Number(sp.rideCounts[attrId]) || 0);
+          });
+        }
+
+        // Getränke-Details mergen
+        merged.drinksDetail = { ...(localP.drinksDetail || { beer: 0, shot: 0, longdrink: 0, joint: 0, water: 0 }) };
+        if (sp.drinksDetail && typeof sp.drinksDetail === 'object') {
+          Object.keys(sp.drinksDetail).forEach(itemId => {
+            merged.drinksDetail[itemId] = Math.max(Number(merged.drinksDetail[itemId]) || 0, Number(sp.drinksDetail[itemId]) || 0);
+          });
+        }
+
+        playerMap.set(sp.id, merged);
+      } else {
+        playerMap.set(sp.id, { ...sp });
+      }
+    });
+
+    const mergedPlayers = Array.from(playerMap.values());
+    if (mergedPlayers.length > 0) {
+      this.state.players = mergedPlayers;
+    }
+
+    // 4. Intelligenter 2-Wege Merge für den Live-Feed
+    const feedMap = new Map();
+    const serverFeed = Array.isArray(serverDb.feed) ? serverDb.feed.filter(f => f && f.type !== "drink") : [];
+    const localFeed = Array.isArray(this.state.feed) ? this.state.feed.filter(f => f && f.type !== "drink") : [];
+
+    // Alle lokalen Feed-Einträge sammeln (sofern nicht von gelöschten Spielern)
+    localFeed.forEach(item => {
+      if (item && item.id && !deletedIds.includes(item.userId)) {
+        if (!serverResetTime || !item.timestamp || new Date(item.timestamp).getTime() >= serverResetTime) {
+          feedMap.set(item.id, item);
+        }
+      }
+    });
+
+    // Server Feed-Einträge mergen
+    serverFeed.forEach(item => {
+      if (item && item.id && !deletedIds.includes(item.userId)) {
+        if (!serverResetTime || !item.timestamp || new Date(item.timestamp).getTime() >= serverResetTime) {
+          feedMap.set(item.id, item);
+        }
+      }
+    });
+
+    const mergedFeed = Array.from(feedMap.values()).sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+    this.state.feed = mergedFeed;
+
     if (Array.isArray(serverDb.houses)) {
       this.state.houses = serverDb.houses;
-    }
-    if (Array.isArray(serverDb.feed)) {
-      this.state.feed = serverDb.feed.filter(item => item && item.type !== "drink");
     }
     if (serverDb.gameStatus) {
       this.state.gameStatus = serverDb.gameStatus;
@@ -297,6 +470,15 @@ class AppStore {
     }
     if (serverDb.sympathyVotes) {
       this.state.sympathyVotes = serverDb.sympathyVotes;
+    }
+
+    // 5. Automatische Wiederherstellung auf Server anstoßen, falls Server nach Sleep/Restart weniger Daten hat als wir
+    const serverPlayerIdSet = new Set(serverPlayers.map(p => p.id));
+    const isServerMissingPlayers = mergedPlayers.some(p => !serverPlayerIdSet.has(p.id));
+    const isServerMissingFeed = mergedFeed.length > serverFeed.length;
+
+    if (isServerMissingPlayers || isServerMissingFeed) {
+      this.syncRestoreToServer(mergedPlayers, mergedFeed);
     }
 
     const activeUserId = localStorage.getItem(this.USER_KEY) || localStorage.getItem("walibi_active_user_id") || localStorage.getItem("walibi_current_user_id") || (this.state.currentUser ? this.state.currentUser.id : null);
@@ -1506,12 +1688,30 @@ class AppStore {
   }
 
   async resetAllData() {
-    if (confirm("Möchtest du wirklich das gesamte Spiel und alle Punkte für alle Spieler zurücksetzen?")) {
-      this.state = this.getDefaultState();
-      this.saveLocalState();
+    const isAdmin = (window.ProfileModule && window.ProfileModule.isAdminUser && window.ProfileModule.isAdminUser()) || (localStorage.getItem("walibi_access_code") === "1008");
+    if (!isAdmin) {
+      alert("❌ Zugriff verweigert! Nur Admin grossek darf das Spiel auf Null zurücksetzen.");
+      return;
+    }
+
+    if (confirm("⚠️ BIST DU ABSOLUT SICHER, grossek?\n\nDadurch werden ALLE Punkte, Fotos, Getränke und Feed-Einträge für alle Spieler auf NULL gesetzt!\n\nNur Grossek bleibt mit 0 Punkten erhalten.")) {
       try {
-        await fetch("/api/reset", { method: "POST" });
-      } catch (e) {}
+        const res = await fetch("/api/admin/reset-game", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: "1008" })
+        });
+        const data = await res.json();
+        if (data.success && data.state) {
+          this.state.lastResetTimestamp = data.state.lastResetTimestamp;
+          this.state.players = data.state.players;
+          this.state.feed = data.state.feed;
+          this.state.deletedPlayerIds = [];
+          this.saveLocalState();
+        }
+      } catch (e) {
+        console.error("Admin reset error:", e);
+      }
       location.reload();
     }
   }

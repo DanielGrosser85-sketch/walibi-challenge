@@ -36,8 +36,10 @@
   "gameStatus": {
     "isRunning": true,
     "isEnded": false,
-    "startedAt": "2026-08-17T22:14:22.483Z"
+    "startedAt": "2026-08-17T23:54:40.881Z"
   },
-  "version": 194,
-  "sympathyVotes": {}
+  "version": 201,
+  "sympathyVotes": {},
+  "deletedPlayerIds": [],
+  "lastResetTimestamp": "2026-08-17T23:54:40.881Z"
 }

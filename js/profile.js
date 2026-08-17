@@ -289,7 +289,11 @@ const ProfileModule = {
       });
       const data = await res.json();
       if (data.success && window.store) {
+        if (Array.isArray(data.deletedPlayerIds)) {
+          window.store.state.deletedPlayerIds = data.deletedPlayerIds;
+        }
         window.store.state.players = data.players;
+        window.store.state.feed = (window.store.state.feed || []).filter(f => f.userId !== playerId);
         window.store.saveLocalState();
         this.renderAdminPlayersList();
         if (window.app) window.app.renderAllViews();
@@ -316,6 +320,9 @@ const ProfileModule = {
       });
       const data = await res.json();
       if (data.success && window.store) {
+        if (Array.isArray(data.deletedPlayerIds)) {
+          window.store.state.deletedPlayerIds = data.deletedPlayerIds;
+        }
         window.store.state.players = data.players;
         window.store.state.feed = [];
         window.store.saveLocalState();
@@ -447,7 +454,7 @@ const ProfileModule = {
   },
 
   async adminResetGame() {
-    const confirmReset = confirm("⚠️ BIST DU ABSOLUT SICHER?\n\nDadurch werden ALLE Punkte, Fotos, Getränke, Coaster-Counts und Feed-Einträge unwiderruflich auf NULL gesetzt!\n\nAlle Spieler außer grossek werden entfernt.");
+    const confirmReset = confirm("⚠️ BIST DU ABSOLUT SICHER, GROSSEK?\n\nDadurch werden ALLE Punkte, Fotos, Getränke, Coaster-Counts und Feed-Einträge unwiderruflich auf NULL gesetzt!\n\nAlle Spieler außer grossek werden entfernt.");
     if (!confirmReset) return;
 
     try {
@@ -460,6 +467,10 @@ const ProfileModule = {
       if (data.success) {
         // Lokalen Store komplett zurücksetzen auf nur Grossek mit 0 Punkten
         if (window.store && window.store.state) {
+          if (data.state && data.state.lastResetTimestamp) {
+            window.store.state.lastResetTimestamp = data.state.lastResetTimestamp;
+          }
+          window.store.state.deletedPlayerIds = [];
           const grossekExisting = window.store.state.players.find(p => p.name.toLowerCase() === 'grossek');
           window.store.state.players = [
             {
@@ -473,10 +484,13 @@ const ProfileModule = {
               completedSideQuests: [],
               rideCounts: {},
               drinksDetail: { beer: 0, shot: 0, longdrink: 0, joint: 0, water: 0 },
-              gutGlaubenCount: 0
+              gutGlaubenCount: 0,
+              sympathyPoints: 0,
+              sympathyVotesReceived: []
             }
           ];
           window.store.state.feed = [];
+          window.store.state.sympathyVotes = {};
           window.store.state.happyHour = { active: false, endsAt: null, multiplier: 2 };
           if (window.store.state.currentUser) {
             window.store.state.currentUser = window.store.state.players[0];
