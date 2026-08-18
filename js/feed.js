@@ -889,6 +889,19 @@ const FeedModule = {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   },
 
+  downloadFeedMediaZip() {
+    if (window.GameAudio) window.GameAudio.playFanfare();
+    if (window.app && window.app.showToast) {
+      window.app.showToast("📦 <strong>ZIP-Archiv wird erstellt...</strong> Der Download aller Fotos & Videos startet gleich!");
+    }
+    const a = document.createElement("a");
+    a.href = "/api/feed/download-zip";
+    a.download = "Walibi_Sauftour_2026_Fotos_Videos.zip";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  },
+
   escapeHtml(str) {
     if (!str) return "";
     return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");

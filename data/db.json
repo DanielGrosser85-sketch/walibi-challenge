@@ -5,7 +5,7 @@
       "name": "grossek",
       "house": "Haus 1",
       "avatar": "assets/avatar_belaestigungspanda.jpg",
-      "points": 0,
+      "points": 10,
       "drinksCount": 0,
       "completedQuests": [],
       "completedSideQuests": [],
@@ -20,6 +20,24 @@
       "gutGlaubenCount": 0,
       "sympathyPoints": 0,
       "sympathyVotesReceived": []
+    },
+    {
+      "id": "p_1787012400981_5tfo",
+      "name": "Fretisch",
+      "house": "Haus 1",
+      "avatar": "assets/avatar_captain_planet.jpg",
+      "points": 10,
+      "drinksCount": 0,
+      "completedQuests": [],
+      "completedSideQuests": [],
+      "rideCounts": {},
+      "drinksDetail": {
+        "beer": 0,
+        "shot": 0,
+        "longdrink": 0,
+        "joint": 0,
+        "water": 0
+      }
     }
   ],
   "houses": [
@@ -27,7 +45,52 @@
     "Haus 2",
     "Haus 3"
   ],
-  "feed": [],
+  "feed": [
+    {
+      "id": "feed_1787012417430_2zx31",
+      "type": "social",
+      "userId": "p_1787012400981_5tfo",
+      "userName": "Fretisch",
+      "userAvatar": "assets/avatar_captain_planet.jpg",
+      "userHouse": "Haus 1",
+      "text": "Schnappschuss geteilt 📸",
+      "photo": "/uploads/post_1787012417429_hzr35e.jpg",
+      "isVideo": false,
+      "points": 10,
+      "actualPointsAwarded": 10,
+      "timestamp": "2026-08-18T00:20:17.430Z",
+      "reactions": {
+        "🔥": [],
+        "🍺": [],
+        "👑": [],
+        "💀": [],
+        "👏": []
+      },
+      "comments": []
+    },
+    {
+      "id": "feed_1787012318719_x5fyg",
+      "type": "social",
+      "userId": "p_1786747056481_o5jo",
+      "userName": "grossek",
+      "userAvatar": "assets/avatar_belaestigungspanda.jpg",
+      "userHouse": "Haus 1",
+      "text": "Schnappschuss geteilt 📸",
+      "photo": "/uploads/post_1787012318718_r78cud.jpg",
+      "isVideo": false,
+      "points": 10,
+      "actualPointsAwarded": 10,
+      "timestamp": "2026-08-18T00:18:38.719Z",
+      "reactions": {
+        "🔥": [],
+        "🍺": [],
+        "👑": [],
+        "💀": [],
+        "👏": []
+      },
+      "comments": []
+    }
+  ],
   "happyHour": {
     "active": false,
     "endsAt": null,
@@ -36,10 +99,8 @@
   "gameStatus": {
     "isRunning": true,
     "isEnded": false,
-    "startedAt": "2026-08-17T23:54:40.881Z"
+    "startedAt": "2026-08-17T22:14:22.483Z"
   },
-  "version": 201,
-  "sympathyVotes": {},
-  "deletedPlayerIds": [],
-  "lastResetTimestamp": "2026-08-17T23:54:40.881Z"
+  "version": 197,
+  "sympathyVotes": {}
 }

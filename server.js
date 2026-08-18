@@ -2,6 +2,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const zlib = require('zlib');
 
 const PORT = process.env.PORT || 3000;
 const DATA_DIR = path.join(__dirname, 'data');
@@ -250,8 +251,256 @@ function saveMediaBase64(base64Str, prefix = 'media') {
   }
 }
 
+// --- FAST CRC32 & ZERO-DEPENDENCY ZIP GENERATOR ---
+const crc32Table = new Uint32Array(256);
+for (let i = 0; i < 256; i++) {
+  let c = i;
+  for (let k = 0; k < 8; k++) {
+    c = ((c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1));
+  }
+  crc32Table[i] = c >>> 0;
+}
+
+function crc32(buf) {
+  let crc = 0xFFFFFFFF;
+  for (let i = 0; i < buf.length; i++) {
+    crc = (crc >>> 8) ^ crc32Table[(crc ^ buf[i]) & 0xFF];
+  }
+  return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+
+function createZipBuffer(files) {
+  const localHeaders = [];
+  const centralHeaders = [];
+  let offset = 0;
+
+  files.forEach(file => {
+    const nameBuffer = Buffer.from(file.name, 'utf-8');
+    const rawData = Buffer.isBuffer(file.data) ? file.data : Buffer.from(file.data || '', 'utf-8');
+    const crc = crc32(rawData);
+    
+    let compressedData = zlib.deflateRawSync(rawData);
+    let compressionMethod = 8; // DEFLATE
+    if (compressedData.length >= rawData.length) {
+      compressedData = rawData;
+      compressionMethod = 0; // STORE
+    }
+
+    const uncompressedSize = rawData.length;
+    const compressedSize = compressedData.length;
+
+    const now = new Date();
+    const dosTime = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
+    const dosDate = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+
+    // Local Header (30 Bytes + filename length)
+    const localHeader = Buffer.alloc(30 + nameBuffer.length);
+    localHeader.writeUInt32LE(0x04034b50, 0); // PK\x03\x04
+    localHeader.writeUInt16LE(20, 4); // version needed
+    localHeader.writeUInt16LE(0x0800, 6); // UTF-8 filename flag
+    localHeader.writeUInt16LE(compressionMethod, 8);
+    localHeader.writeUInt16LE(dosTime, 10);
+    localHeader.writeUInt16LE(dosDate, 12);
+    localHeader.writeUInt32LE(crc, 14);
+    localHeader.writeUInt32LE(compressedSize, 18);
+    localHeader.writeUInt32LE(uncompressedSize, 22);
+    localHeader.writeUInt16LE(nameBuffer.length, 26);
+    localHeader.writeUInt16LE(0, 28); // extra field len
+    nameBuffer.copy(localHeader, 30);
+
+    // Central Directory Header (46 Bytes + filename length)
+    const centralHeader = Buffer.alloc(46 + nameBuffer.length);
+    centralHeader.writeUInt32LE(0x02014b50, 0); // PK\x01\x02
+    centralHeader.writeUInt16LE(20, 4); // version made by
+    centralHeader.writeUInt16LE(20, 6); // version needed
+    centralHeader.writeUInt16LE(0x0800, 8); // UTF-8 filename flag
+    centralHeader.writeUInt16LE(compressionMethod, 10);
+    centralHeader.writeUInt16LE(dosTime, 12);
+    centralHeader.writeUInt16LE(dosDate, 14);
+    centralHeader.writeUInt32LE(crc, 16);
+    centralHeader.writeUInt32LE(compressedSize, 20);
+    centralHeader.writeUInt32LE(uncompressedSize, 24);
+    centralHeader.writeUInt16LE(nameBuffer.length, 28);
+    centralHeader.writeUInt16LE(0, 30); // extra len
+    centralHeader.writeUInt16LE(0, 32); // comment len
+    centralHeader.writeUInt16LE(0, 34); // disk start
+    centralHeader.writeUInt16LE(0, 36); // internal attr
+    centralHeader.writeUInt32LE(0, 38); // external attr
+    centralHeader.writeUInt32LE(offset, 42); // relative offset of local header
+    nameBuffer.copy(centralHeader, 46);
+
+    localHeaders.push(localHeader, compressedData);
+    centralHeaders.push(centralHeader);
+
+    offset += localHeader.length + compressedData.length;
+  });
+
+  const centralDirOffset = offset;
+  let centralDirSize = 0;
+  centralHeaders.forEach(ch => centralDirSize += ch.length);
+
+  // End of Central Directory (22 Bytes)
+  const eocd = Buffer.alloc(22);
+  eocd.writeUInt32LE(0x06054b50, 0); // PK\x05\x06
+  eocd.writeUInt16LE(0, 4); // disk number
+  eocd.writeUInt16LE(0, 6); // start disk
+  eocd.writeUInt16LE(files.length, 8); // entries on this disk
+  eocd.writeUInt16LE(files.length, 10); // total entries
+  eocd.writeUInt32LE(centralDirSize, 12);
+  eocd.writeUInt32LE(centralDirOffset, 16);
+  eocd.writeUInt16LE(0, 20); // comment len
+
+  return Buffer.concat([...localHeaders, ...centralHeaders, eocd]);
+}
+
+function sanitizeFilename(str) {
+  return (str || '')
+    .replace(/[äÄ]/g, 'ae')
+    .replace(/[öÖ]/g, 'oe')
+    .replace(/[üÜ]/g, 'ue')
+    .replace(/[ß]/g, 'ss')
+    .replace(/[^a-zA-Z0-9_-]/g, '_')
+    .substring(0, 35);
+}
+
 // --- API ROUTER ---
 function handleApiRequest(pathname, req, res) {
+  // GET /api/feed/download-zip (Alle Fotos, Videos und Chronik als ZIP herunterladen)
+  if (pathname === '/api/feed/download-zip' && req.method === 'GET') {
+    try {
+      const filesToZip = [];
+      const usedFilenames = new Set();
+
+      function getUniqueName(baseName, ext) {
+        let candidate = `${baseName}.${ext}`;
+        let counter = 1;
+        while (usedFilenames.has(candidate)) {
+          candidate = `${baseName}_${counter}.${ext}`;
+          counter++;
+        }
+        usedFilenames.add(candidate);
+        return candidate;
+      }
+
+      // 1. Text-Chronik & Siegerliste zusammenstellen
+      const sortedPlayers = [...db.players].sort((a, b) => (b.points || 0) - (a.points || 0));
+      let reportText = `======================================================\n`;
+      reportText += `👑 WALIBI & FROSCHKÖNIG SAUFTOUR '26 - CHRONIK & MEDIEN\n`;
+      reportText += `======================================================\n\n`;
+      reportText += `📅 Erstellt am: ${new Date().toLocaleString('de-DE')}\n`;
+      reportText += `👥 Teilnehmer:  ${sortedPlayers.length}\n`;
+      reportText += `📸 Feed-Posts:  ${db.feed.length}\n\n`;
+      reportText += `🏆 RANGLISTE & PUNKTE:\n`;
+      reportText += `------------------------------------------------------\n`;
+      sortedPlayers.forEach((p, idx) => {
+        reportText += `${idx + 1}. ${p.name.padEnd(16)} | ${String(p.points).padStart(4)} Pkt | ${p.drinksCount || 0} Drinks | ${p.house || 'Haus 1'}\n`;
+      });
+      reportText += `\n------------------------------------------------------\n`;
+      reportText += `📜 CHRONOLOGISCHER FEED-VERLAUF:\n`;
+      reportText += `------------------------------------------------------\n`;
+
+      db.feed.forEach((item, idx) => {
+        const timeStr = item.timestamp ? new Date(item.timestamp).toLocaleTimeString('de-DE') : 'Unbekannt';
+        reportText += `[#${idx + 1} | ${timeStr}] ${item.userName} (${item.userHouse || 'Haus 1'}): `;
+        if (item.questTitle) reportText += `🎯 ${item.questTitle} (+${item.actualPointsAwarded || item.points || 0} Pkt)\n`;
+        if (item.text) reportText += `"${item.text}"\n`;
+        if (item.userComment) reportText += `Kommentar: "${item.userComment}"\n`;
+        if (item.comments && item.comments.length > 0) {
+          item.comments.forEach(c => {
+            reportText += `   ↳ 💬 ${c.userName}: "${c.text || ''}"\n`;
+          });
+        }
+        reportText += `\n`;
+      });
+
+      filesToZip.push({
+        name: `00_Sauftour_2026_Chronik_und_Rangliste.txt`,
+        data: Buffer.from(reportText, 'utf-8')
+      });
+
+      // 2. Alle Fotos & Videos aus dem Feed sammeln
+      let mediaIndex = 1;
+      db.feed.forEach(item => {
+        const uName = sanitizeFilename(item.userName || 'Spieler');
+        const qTitle = sanitizeFilename(item.questTitle || item.text || 'Post');
+
+        // Haupt-Medium (Foto oder Video)
+        if (item.photo) {
+          let mediaBuffer = null;
+          let ext = item.isVideo ? 'mp4' : 'jpg';
+
+          if (item.photo.startsWith('/uploads/')) {
+            const diskPath = path.join(UPLOADS_DIR, path.basename(item.photo));
+            if (fs.existsSync(diskPath)) {
+              mediaBuffer = fs.readFileSync(diskPath);
+              ext = path.extname(diskPath).replace('.', '').toLowerCase() || ext;
+            }
+          } else if (item.photo.startsWith('data:')) {
+            const marker = ';base64,';
+            const idx = item.photo.indexOf(marker);
+            if (idx !== -1) {
+              const mime = item.photo.substring(5, idx);
+              if (mime.includes('png')) ext = 'png';
+              else if (mime.includes('mp4')) ext = 'mp4';
+              else if (mime.includes('webm')) ext = 'webm';
+              else if (mime.includes('mov')) ext = 'mov';
+              mediaBuffer = Buffer.from(item.photo.substring(idx + marker.length), 'base64');
+            }
+          }
+
+          if (mediaBuffer) {
+            const fileName = getUniqueName(`${String(mediaIndex).padStart(2, '0')}_${uName}_${qTitle}`, ext);
+            filesToZip.push({ name: `Fotos_und_Videos/${fileName}`, data: mediaBuffer });
+            mediaIndex++;
+          }
+        }
+
+        // Fotos in Kommentaren
+        if (Array.isArray(item.comments)) {
+          item.comments.forEach(cmt => {
+            if (cmt.photo) {
+              let cBuffer = null;
+              let cExt = 'jpg';
+              if (cmt.photo.startsWith('/uploads/')) {
+                const diskPath = path.join(UPLOADS_DIR, path.basename(cmt.photo));
+                if (fs.existsSync(diskPath)) {
+                  cBuffer = fs.readFileSync(diskPath);
+                  cExt = path.extname(diskPath).replace('.', '').toLowerCase() || 'jpg';
+                }
+              } else if (cmt.photo.startsWith('data:')) {
+                const marker = ';base64,';
+                const idx = cmt.photo.indexOf(marker);
+                if (idx !== -1) {
+                  cBuffer = Buffer.from(cmt.photo.substring(idx + marker.length), 'base64');
+                }
+              }
+              if (cBuffer) {
+                const cName = sanitizeFilename(cmt.userName || 'Antwort');
+                const cFileName = getUniqueName(`Kommentar_${String(mediaIndex).padStart(2, '0')}_${cName}`, cExt);
+                filesToZip.push({ name: `Fotos_und_Videos/${cFileName}`, data: cBuffer });
+                mediaIndex++;
+              }
+            }
+          });
+        }
+      });
+
+      const zipBuffer = createZipBuffer(filesToZip);
+      res.writeHead(200, {
+        'Content-Type': 'application/zip',
+        'Content-Disposition': 'attachment; filename="Walibi_Sauftour_2026_Fotos_Videos.zip"',
+        'Content-Length': zipBuffer.length
+      });
+      res.end(zipBuffer);
+      console.log(`📦 [ZIP-Download] ${filesToZip.length} Dateien gepackt (${(zipBuffer.length / 1024 / 1024).toFixed(2)} MB) ausgeliefert!`);
+    } catch (e) {
+      console.error('Fehler beim Erstellen der ZIP-Datei:', e);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Fehler beim Erstellen des ZIP-Archivs' }));
+    }
+    return;
+  }
+
   // GET /api/state
   if (pathname === '/api/state' && req.method === 'GET') {
     res.writeHead(200, { 'Content-Type': 'application/json' });

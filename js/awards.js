@@ -753,6 +753,10 @@ const AwardsModule = {
       </div>
 
       <div style="display: flex; flex-direction: column; gap: 8px;">
+        <button type="button" class="btn-primary" onclick="FeedModule.downloadFeedMediaZip();" style="background: linear-gradient(135deg, #10b981, #059669); color: #fff; font-weight: 900; border: 2px solid #34d399; font-size: 14px; box-shadow: 0 0 16px rgba(16,185,129,0.4);">
+          📦 ALLE FOTOS & VIDEOS HERUNTERLADEN (.ZIP)
+        </button>
+
         <button type="button" class="btn-primary" onclick="AwardsModule.closeCelebrationModal(); SympathyModule.openVoteModal();" style="background: linear-gradient(135deg, #ec4899, #f59e0b); color: #fff; font-weight: 900; border: 2px solid #fff; font-size: 14px; box-shadow: 0 0 16px rgba(236,72,153,0.4);">
           💖 SYMPATHIE-PUNKTE VERGEBEN / ANPASSEN
         </button>
