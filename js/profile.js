@@ -454,7 +454,7 @@ const ProfileModule = {
   },
 
   async adminResetGame() {
-    const confirmReset = confirm("⚠️ BIST DU ABSOLUT SICHER, GROSSEK?\n\nDadurch werden ALLE Punkte, Fotos, Getränke, Coaster-Counts und Feed-Einträge unwiderruflich auf NULL gesetzt!\n\nAlle Spieler außer grossek werden entfernt.");
+    const confirmReset = confirm("⚠️ BIST DU ABSOLUT SICHER, GROSSEK?\n\nDadurch werden ALLE Punkte, Fotos, Getränke, Coaster-Counts und Feed-Einträge auf NULL gesetzt!\n\nAlle registrierten Mitspieler bleiben erhalten.");
     if (!confirmReset) return;
 
     try {
@@ -465,19 +465,18 @@ const ProfileModule = {
       });
       const data = await res.json();
       if (data.success) {
-        // Lokalen Store komplett zurücksetzen auf nur Grossek mit 0 Punkten
+        // Lokalen Store aktualisieren: Alle Spieler behalten, aber Punkte auf 0 setzen
         if (window.store && window.store.state) {
           if (data.state && data.state.lastResetTimestamp) {
             window.store.state.lastResetTimestamp = data.state.lastResetTimestamp;
           }
           window.store.state.deletedPlayerIds = [];
-          const grossekExisting = window.store.state.players.find(p => p.name.toLowerCase() === 'grossek');
-          window.store.state.players = [
-            {
-              id: grossekExisting ? grossekExisting.id : "p_1786747056481_o5jo",
-              name: "grossek",
-              house: "Haus 1",
-              avatar: (grossekExisting && grossekExisting.avatar) || "assets/mascot_fox.jpg",
+          
+          if (data.state && Array.isArray(data.state.players)) {
+            window.store.state.players = data.state.players;
+          } else {
+            window.store.state.players = (window.store.state.players || []).map(p => ({
+              ...p,
               points: 0,
               drinksCount: 0,
               completedQuests: [],
@@ -487,15 +486,12 @@ const ProfileModule = {
               gutGlaubenCount: 0,
               sympathyPoints: 0,
               sympathyVotesReceived: []
-            }
-          ];
+            }));
+          }
+
           window.store.state.feed = [];
           window.store.state.sympathyVotes = {};
           window.store.state.happyHour = { active: false, endsAt: null, multiplier: 2 };
-          if (window.store.state.currentUser) {
-            window.store.state.currentUser = window.store.state.players[0];
-            localStorage.setItem("walibi_active_user_id", window.store.state.players[0].id);
-          }
           window.store.saveLocalState();
         }
 
@@ -507,7 +503,7 @@ const ProfileModule = {
         if (window.app) window.app.renderAllViews();
         if (window.ParkGuideModule) window.ParkGuideModule.render();
         if (window.app && window.app.showToast) {
-          window.app.showToast(`💥 ALLES AUF NULL GESETZT! Nur grossek aktiv.`);
+          window.app.showToast(`💥 SPIELSTAND AUF NULL GESETZT! Alle Mitspieler behalten.`);
         }
       }
     } catch (e) {

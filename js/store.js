@@ -1694,7 +1694,7 @@ class AppStore {
       return;
     }
 
-    if (confirm("⚠️ BIST DU ABSOLUT SICHER, grossek?\n\nDadurch werden ALLE Punkte, Fotos, Getränke und Feed-Einträge für alle Spieler auf NULL gesetzt!\n\nNur Grossek bleibt mit 0 Punkten erhalten.")) {
+    if (confirm("⚠️ BIST DU ABSOLUT SICHER, grossek?\n\nDadurch werden ALLE Punkte, Fotos, Getränke und Feed-Einträge auf NULL gesetzt!\n\nAlle registrierten Mitspieler bleiben erhalten.")) {
       try {
         const res = await fetch("/api/admin/reset-game", {
           method: "POST",
