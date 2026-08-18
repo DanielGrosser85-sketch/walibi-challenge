@@ -1350,7 +1350,7 @@ function handleApiRequest(pathname, req, res) {
     return;
   }
 
-  // POST /api/admin/reset-game (Kompletter Reset auf 0 & nur Grossek behalten)
+  // POST /api/admin/reset-game (Punkte, Feed, Drinks & Quests auf 0 zurücksetzen - ALLE SPIELER BEHALTEN)
   if (pathname === '/api/admin/reset-game' && req.method === 'POST') {
     parseJsonBody(req, (err, data) => {
       if (err || data.code !== '1008') {
@@ -1363,25 +1363,51 @@ function handleApiRequest(pathname, req, res) {
       db.lastResetTimestamp = resetTime;
       db.deletedPlayerIds = [];
 
-      // Nur Grossek behalten mit 0 Punkten
-      const grossekExisting = db.players.find(p => p.name.toLowerCase() === 'grossek');
-      db.players = [
-        {
-          id: grossekExisting ? grossekExisting.id : "p_1786747056481_o5jo",
-          name: "grossek",
-          house: "Haus 1",
-          avatar: (grossekExisting && grossekExisting.avatar) || "assets/mascot_fox.jpg",
-          points: 0,
-          drinksCount: 0,
-          completedQuests: [],
-          completedSideQuests: [],
-          rideCounts: {},
-          drinksDetail: { beer: 0, shot: 0, longdrink: 0, joint: 0, water: 0 },
-          gutGlaubenCount: 0,
-          sympathyPoints: 0,
-          sympathyVotesReceived: []
-        }
-      ];
+      // Spieler aus Server-DB und Client-Request sammeln
+      const playerMap = new Map();
+      (db.players || []).forEach(p => {
+        if (p && p.id) playerMap.set(p.id, { ...p });
+      });
+      if (Array.isArray(data.players)) {
+        data.players.forEach(p => {
+          if (p && p.id) {
+            if (playerMap.has(p.id)) {
+              playerMap.set(p.id, { ...playerMap.get(p.id), ...p });
+            } else {
+              playerMap.set(p.id, { ...p });
+            }
+          }
+        });
+      }
+
+      let allPlayers = Array.from(playerMap.values());
+      if (allPlayers.length === 0) {
+        allPlayers = [
+          {
+            id: "p_1786747056481_o5jo",
+            name: "grossek",
+            house: "Haus 1",
+            avatar: "assets/mascot_fox.jpg"
+          }
+        ];
+      }
+
+      // Alle bestehenden Spieler behalten, aber Punkte, Getränke und Quests auf 0 setzen
+      db.players = allPlayers.map(p => ({
+        id: p.id,
+        name: p.name,
+        house: p.house || "Haus 1",
+        avatar: p.avatar || "assets/mascot_fox.jpg",
+        points: 0,
+        drinksCount: 0,
+        completedQuests: [],
+        completedSideQuests: [],
+        rideCounts: {},
+        drinksDetail: { beer: 0, shot: 0, longdrink: 0, joint: 0, water: 0 },
+        gutGlaubenCount: 0,
+        sympathyPoints: 0,
+        sympathyVotesReceived: []
+      }));
 
       // Feed komplett leeren, Sympathie-Votes leeren, Happy Hour stoppen & Spiel reaktivieren
       db.feed = [];
@@ -1392,9 +1418,9 @@ function handleApiRequest(pathname, req, res) {
 
       broadcastSSE({ type: "ADMIN_RESET", lastResetTimestamp: resetTime, state: db });
 
-      console.log("🚨 ADMIN RESET DURCHGEFÜHRT: Nur Grossek behalten, alle Punkte auf 0, Feed geleert!");
+      console.log("🚨 ADMIN RESET DURCHGEFÜHRT: Punkte & Feed auf 0 gesetzt, alle Spieler behalten!");
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: true, message: 'Spiel vollständig zurückgesetzt, nur Grossek aktiv', state: db }));
+      res.end(JSON.stringify({ success: true, message: 'Spielstand auf 0 zurückgesetzt, alle Spieler behalten', state: db }));
     });
     return;
   }
