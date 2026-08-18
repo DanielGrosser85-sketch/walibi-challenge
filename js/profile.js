@@ -458,10 +458,17 @@ const ProfileModule = {
     if (!confirmReset) return;
 
     try {
+      const currentPlayers = (window.store && window.store.state && Array.isArray(window.store.state.players)) 
+        ? window.store.state.players 
+        : [];
+
       const res = await fetch("/api/admin/reset-game", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: "1008" })
+        body: JSON.stringify({ 
+          code: "1008",
+          players: currentPlayers
+        })
       });
       const data = await res.json();
       if (data.success) {

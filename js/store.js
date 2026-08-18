@@ -360,8 +360,43 @@ class AppStore {
       // Neuerer Admin-Reset vom Server -> Lokalen State auf Server-Reset-Stand bringen
       this.state.lastResetTimestamp = serverDb.lastResetTimestamp;
       this.state.deletedPlayerIds = Array.isArray(serverDb.deletedPlayerIds) ? serverDb.deletedPlayerIds : [];
-      this.state.players = Array.isArray(serverDb.players) ? serverDb.players : this.getDefaultState().players;
-      this.state.feed = Array.isArray(serverDb.feed) ? serverDb.feed : [];
+      
+      const playerMap = new Map();
+      (serverDb.players || []).forEach(p => {
+        if (p && p.id) {
+          playerMap.set(p.id, {
+            ...p,
+            points: 0,
+            drinksCount: 0,
+            completedQuests: [],
+            completedSideQuests: [],
+            rideCounts: {},
+            drinksDetail: { beer: 0, shot: 0, longdrink: 0, joint: 0, water: 0 },
+            gutGlaubenCount: 0,
+            sympathyPoints: 0,
+            sympathyVotesReceived: []
+          });
+        }
+      });
+      (this.state.players || []).forEach(p => {
+        if (p && p.id && !playerMap.has(p.id)) {
+          playerMap.set(p.id, {
+            ...p,
+            points: 0,
+            drinksCount: 0,
+            completedQuests: [],
+            completedSideQuests: [],
+            rideCounts: {},
+            drinksDetail: { beer: 0, shot: 0, longdrink: 0, joint: 0, water: 0 },
+            gutGlaubenCount: 0,
+            sympathyPoints: 0,
+            sympathyVotesReceived: []
+          });
+        }
+      });
+
+      this.state.players = Array.from(playerMap.values());
+      this.state.feed = [];
       this.state.sympathyVotes = serverDb.sympathyVotes || {};
       this.state.happyHour = serverDb.happyHour || { active: false, endsAt: null, multiplier: 2 };
       this.state.gameStatus = serverDb.gameStatus || { isRunning: true, isEnded: false };
